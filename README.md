@@ -1,174 +1,30 @@
-# just-the-docs-template
+# Getting started with space game
 
-This is a *bare-minimum* template to create a [Jekyll] site that:
+We'll be using the newest version of leptos with a postgres database, but initially we'll have sqlite database.
 
-- uses the [Just the Docs] theme;
-- can be built and published on [GitHub Pages];
-- can be built and previewed locally, and published on other platforms.
 
-More specifically, the created site:
+Users first visit will allow them to create an account or connect with their github account.
 
-- uses a gem-based approach, i.e. uses a `Gemfile` and loads the `just-the-docs` gem;
-- uses the [GitHub Pages / Actions workflow] to build and publish the site on GitHub Pages.
 
-To get started with creating a site, simply:
+After creating an account or logging in, they'll see a link they can send to friends in order to connect and play.  Also on the home screen the player should see links to create boards or start an AI game (not really AI, just a system player that plays random boards).
 
-1. click "[use this template]" to create a GitHub repository
-2. go to Settings > Pages > Build and deployment > Source, and select GitHub Actions
 
-If you want to maintain your docs in the `docs` directory of an existing project repo, see [Hosting your docs from an existing project repo](#hosting-your-docs-from-an-existing-project-repo).
+Friends they've played with will appear in a column on the left, along with system generated players that just play randomly.
 
-After completing the creation of your new site on GitHub, update it as needed:
 
-## Replace the content of the template pages
+Before selecting a player you have the opportunity to create a strategy - not sure that's the best word for it, do suggest a better one - what I'm thinking is that there's a grid that's 2 X 2 - we'll add bigger boards as well - but we'll start off with 2 X 2 - in this phase the player will choose a start square at the bottom of the board, their "piece" starts there and they can either place a trap in any adjascent square - so on a two by two either the square in front (above) or beside their piece - or they can move their piece to any adjascent square, either in front or beside.  The goal is to create a sequence of turns and get their piece off the other side of the board, and stop their opponent with a trap.  In play, their opponents board will be set up in the opposite direction and scored.
 
-Update the following files to your own content:
 
-- `index.md` (your new home page)
-- `README.md` (information for those who access your site repo on GitHub)
+During board creation a graphic of the board will appear and a key will be along side.  A circle signifies the player piece and an x is a trap.  For the first turn, the player will see buttons to choose circle in any of the bottom, squares of the grid - after choosing one of those, any adjascent square that doesn't already have a trap or circle in it will have buttons to choose either circle or x.  When there is a circle in the last (top) row, there will be one button labeled "Finish" Signifying the last move reaching the goal.
 
-## Changing the version of the theme and/or Jekyll
 
-Simply edit the relevant line(s) in the `Gemfile`.
+Points are added up for each sequential turn - players get points for a move towards their goal that doesn't land on a trap or the other player.  No more turns are played after a player lands in a square containing either a trap or the other player.  
 
-## Adding a plugin
 
-The Just the Docs theme automatically includes the [`jekyll-seo-tag`] plugin.
+The player must create at least one board before connecting for a game - during a game you cannot create boards, only choose from boards you have already made.  So starting a game with no boards sends you to the board creation phase before connecting with the chosen player.
 
-To add an extra plugin, you need to add it in the `Gemfile` *and* in `_config.yml`. For example, to add [`jekyll-default-layout`]:
 
-- Add the following to your site's `Gemfile`:
+When both players are connected, they are presented with a list of board thumbnails, they have three seconds to choose a board or the opponent receives all points for that round.  After both players have selected a board, the boards are displayed, opponent's board overlaid but only so far as the player hasn't hit a trap or the other player, only valid turns are displayed for each player.  Player totals for that round are displayed for 2 seconds, then added to the totals displayed off to the side, then players are prompted to choose a board with a timer counting down 3 seconds.  After three seconds, results are displayed again.
 
-  ```ruby
-  gem "jekyll-default-layout"
-  ```
 
-- And add the following to your site's `_config.yml`:
-
-  ```yaml
-  plugins:
-    - jekyll-default-layout
-  ```
-
-Note: If you are using a Jekyll version less than 3.5.0, use the `gems` key instead of `plugins`.
-
-## Publishing your site on GitHub Pages
-
-1.  If your created site is `YOUR-USERNAME/YOUR-SITE-NAME`, update `_config.yml` to:
-
-    ```yaml
-    title: YOUR TITLE
-    description: YOUR DESCRIPTION
-    theme: just-the-docs
-
-    url: https://YOUR-USERNAME.github.io/YOUR-SITE-NAME
-
-    aux_links: # remove if you don't want this link to appear on your pages
-      Template Repository: https://github.com/YOUR-USERNAME/YOUR-SITE-NAME
-    ```
-
-2.  Push your updated `_config.yml` to your site on GitHub.
-
-3.  In your newly created repo on GitHub:
-    - go to the `Settings` tab -> `Pages` -> `Build and deployment`, then select `Source`: `GitHub Actions`.
-    - if there were any failed Actions, go to the `Actions` tab and click on `Re-run jobs`.
-
-## Building and previewing your site locally
-
-Assuming [Jekyll] and [Bundler] are installed on your computer:
-
-1.  Change your working directory to the root directory of your site.
-
-2.  Run `bundle install`.
-
-3.  Run `bundle exec jekyll serve` to build your site and preview it at `localhost:4000`.
-
-    The built site is stored in the directory `_site`.
-
-## Publishing your built site on a different platform
-
-Just upload all the files in the directory `_site`.
-
-## Customization
-
-You're free to customize sites that you create with this template, however you like!
-
-[Browse our documentation][Just the Docs] to learn more about how to use this theme.
-
-## Hosting your docs from an existing project repo
-
-You might want to maintain your docs in an existing project repo. Instead of creating a new repo using the [just-the-docs template](https://github.com/just-the-docs/just-the-docs-template), you can copy the template files into your existing repo and configure the template's Github Actions workflow to build from a `docs` directory. You can clone the template to your local machine or download the `.zip` file to access the files.
-
-### Copy the template files
-
-1.  Create a `.github/workflows` directory at your project root if your repo doesn't already have one. Copy the `pages.yml` file into this directory. GitHub Actions searches this directory for workflow files.
-
-2.  Create a `docs` directory at your project root and copy all remaining template files into this directory.
-
-### Modify the GitHub Actions workflow
-
-The GitHub Actions workflow that builds and deploys your site to Github Pages is defined by the `pages.yml` file. You'll need to edit this file to that so that your build and deploy steps look to your `docs` directory, rather than the project root.
-
-1.  Set the default `working-directory` param for the build job.
-
-    ```yaml
-    build:
-      runs-on: ubuntu-latest
-      defaults:
-        run:
-          working-directory: docs
-    ```
-
-2.  Set the `working-directory` param for the Setup Ruby step.
-
-    ```yaml
-    - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.1'
-          bundler-cache: true
-          cache-version: 0
-          working-directory: '${{ github.workspace }}/docs'
-    ```
-
-3.  Set the path param for the Upload artifact step:
-
-    ```yaml
-    - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
-        with:
-          path: "docs/_site/"
-    ```
-
-4.  Modify the trigger so that only changes within the `docs` directory start the workflow. Otherwise, every change to your project (even those that don't affect the docs) would trigger a new site build and deploy.
-
-    ```yaml
-    on:
-      push:
-        branches:
-          - "main"
-        paths:
-          - "docs/**"
-    ```
-
-## Licensing and Attribution
-
-This repository is licensed under the [MIT License]. You are generally free to reuse or extend upon this code as you see fit; just include the original copy of the license (which is preserved when you "make a template"). While it's not necessary, we'd love to hear from you if you do use this template, and how we can improve it for future use!
-
-The deployment GitHub Actions workflow is heavily based on GitHub's mixed-party [starter workflows]. A copy of their MIT License is available in [actions/starter-workflows].
-
-----
-
-[^1]: [It can take up to 10 minutes for changes to your site to publish after you push the changes to GitHub](https://docs.github.com/en/pages/setting-up-a-github-pages-site-with-jekyll/creating-a-github-pages-site-with-jekyll#creating-your-site).
-
-[Jekyll]: https://jekyllrb.com
-[Just the Docs]: https://just-the-docs.github.io/just-the-docs/
-[GitHub Pages]: https://docs.github.com/en/pages
-[GitHub Pages / Actions workflow]: https://github.blog/changelog/2022-07-27-github-pages-custom-github-actions-workflows-beta/
-[Bundler]: https://bundler.io
-[use this template]: https://github.com/just-the-docs/just-the-docs-template/generate
-[`jekyll-default-layout`]: https://github.com/benbalter/jekyll-default-layout
-[`jekyll-seo-tag`]: https://jekyll.github.io/jekyll-seo-tag
-[MIT License]: https://en.wikipedia.org/wiki/MIT_License
-[starter workflows]: https://github.com/actions/starter-workflows/blob/main/pages/jekyll.yml
-[actions/starter-workflows]: https://github.com/actions/starter-workflows/blob/main/LICENSE
+1 game consists of 8 rounds.  After which the total points are displayed along with the option to play again or "Naur".  Play again when clicked by one player says "waiting for other player" and displays "[username] wants to play again!" on the other player's screen.  New game starts when both players click play again.  If a player click Naur the other player receives a message that says the other player declined to play again with a button to go back to the main screen.  

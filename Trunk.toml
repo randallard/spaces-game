@@ -1,0 +1,10 @@
+[build]
+target = "index.html"
+dist = "dist"
+public_url = "/space-game/"
+
+[serve]
+port = 8080
+
+[watch]
+watch = ["src", "styles", "index.html"]
