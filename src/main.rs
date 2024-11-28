@@ -1,13 +1,20 @@
 use leptos::*;
 use leptos::prelude::*;
+use web_sys::MouseEvent;
 
 #[component]
 fn App() -> impl IntoView {
-    let (name, set_name) = create_signal(String::new());
-    let (greeting, set_greeting) = create_signal(String::new());
+    let (name, set_name) = signal(String::new());
+    let (greeting, set_greeting) = signal(String::new());
 
-    let handle_submit = move |_| {
+    let handle_submit = move |_: MouseEvent| {
         if !name.get().is_empty() {
+            set_greeting.set(format!("Hello, {}!", name.get()));
+        }
+    };
+
+    let handle_keypress = move |ev: web_sys::KeyboardEvent| {
+        if ev.key() == "Enter" && !name.get().is_empty() {
             set_greeting.set(format!("Hello, {}!", name.get()));
         }
     };
@@ -27,6 +34,7 @@ fn App() -> impl IntoView {
                 on:input=move |ev| {
                     set_name.set(event_target_value(&ev));
                 }
+                on:keypress=handle_keypress
                 prop:value=name
             />
             <button
