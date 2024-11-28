@@ -1,4 +1,7 @@
 use leptos::*;
+use leptos::prelude::*;
+use mount::mount_to_body;
+use std::convert::Into;
 
 #[component]
 fn App() -> impl IntoView {
