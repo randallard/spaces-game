@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Game</title>
+    <link rel="stylesheet" href="/space-game/tailwind-aa7fed3eae22bbfc.css" integrity="sha384&#x2D;zVHOrQGlDEnAkr66QAtNfcTbB1rsClrOzaCLMdhQ&#x2B;BXT594R5OqIk0JgP7uWKqZY"/>
+  <link rel="modulepreload" href="/space-game/space-game-e5db5ec32396be41.js" crossorigin=anonymous integrity="sha384-I/bWKsz2NAW6cyg+Njl4EMWrvjyYexh4bEjQs7rgPSVjH2as1NBdWmtIj1RLR9Nz"><link rel="preload" href="/space-game/space-game-e5db5ec32396be41_bg.wasm" crossorigin=anonymous integrity="sha384-QgqQBpM/wroObizjVCC93brQYVCU3F6d7jwhxjhNFNpTZU6eE2EimsPI8MMNkDH4" as="fetch" type="application/wasm"></head>
+  <body>
+  
+<script type="module" nonce="FCnZwCsXGQt+qFRY+Nz1WA==">
+import init, * as bindings from '/space-game/space-game-e5db5ec32396be41.js';
+const wasm = await init({ module_or_path: '/space-game/space-game-e5db5ec32396be41_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script></body>
+</html>
