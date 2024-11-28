@@ -179,11 +179,11 @@ function makeMutClosure(arg0, arg1, dtor, f) {
     return real;
 }
 function __wbg_adapter_26(arg0, arg1, arg2) {
-    wasm.closure39_externref_shim(arg0, arg1, arg2);
+    wasm.closure41_externref_shim(arg0, arg1, arg2);
 }
 
 function __wbg_adapter_31(arg0, arg1, arg2) {
-    wasm.closure71_externref_shim(arg0, arg1, arg2);
+    wasm.closure73_externref_shim(arg0, arg1, arg2);
 }
 
 function isLikeNone(x) {
@@ -206,8 +206,8 @@ function handleError(f, args) {
 }
 
 function notDefined(what) { return () => { throw new Error(`${what} is not defined`); }; }
-function __wbg_adapter_94(arg0, arg1, arg2, arg3) {
-    wasm.closure87_externref_shim(arg0, arg1, arg2, arg3);
+function __wbg_adapter_96(arg0, arg1, arg2, arg3) {
+    wasm.closure89_externref_shim(arg0, arg1, arg2, arg3);
 }
 
 const __wbindgen_enum_BinaryType = ["blob", "arraybuffer"];
@@ -461,6 +461,13 @@ function __wbg_get_imports() {
         getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
         getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
     };
+    imports.wbg.__wbg_key_001eb20ba3b3d2fd = function(arg0, arg1) {
+        const ret = arg1.key;
+        const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+        getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    };
     imports.wbg.__wbg_byobRequest_86ac467c94924d3c = function(arg0) {
         const ret = arg0.byobRequest;
         return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
@@ -574,7 +581,7 @@ function __wbg_get_imports() {
                 const a = state0.a;
                 state0.a = 0;
                 try {
-                    return __wbg_adapter_94(a, state0.b, arg0, arg1);
+                    return __wbg_adapter_96(a, state0.b, arg0, arg1);
                 } finally {
                     state0.a = a;
                 }
@@ -642,16 +649,16 @@ function __wbg_get_imports() {
         const ret = wasm.memory;
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper145 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 40, __wbg_adapter_26);
+    imports.wbg.__wbindgen_closure_wrapper148 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 42, __wbg_adapter_26);
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper147 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 40, __wbg_adapter_26);
+    imports.wbg.__wbindgen_closure_wrapper150 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 42, __wbg_adapter_26);
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper1516 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 72, __wbg_adapter_31);
+    imports.wbg.__wbindgen_closure_wrapper1520 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 74, __wbg_adapter_31);
         return ret;
     };
     imports.wbg.__wbindgen_init_externref_table = function() {
