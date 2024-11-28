@@ -29,7 +29,7 @@ jobs:
 
       - name: Build
         run: |
-          trunk build --release
+          trunk build --release --public-url spaces-game
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3

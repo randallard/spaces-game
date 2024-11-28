@@ -6,5 +6,8 @@ port = 8080
 # The path to serve at.
 path = "/"
 
+[watch]
+ignore = ["./dist/tailwind.css"]
+
 [build]
-base_path = "spaces-game"
+target = "index.html"
