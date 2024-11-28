@@ -6,16 +6,19 @@ use web_sys::MouseEvent;
 fn App() -> impl IntoView {
     let (name, set_name) = signal(String::new());
     let (greeting, set_greeting) = signal(String::new());
+    let (show_form, set_show_form) = signal(true);
 
     let handle_submit = move |_: MouseEvent| {
         if !name.get().is_empty() {
             set_greeting.set(format!("Hello, {}!", name.get()));
+            set_show_form.set(false);
         }
     };
 
     let handle_keypress = move |ev: web_sys::KeyboardEvent| {
         if ev.key() == "Enter" && !name.get().is_empty() {
             set_greeting.set(format!("Hello, {}!", name.get()));
+            set_show_form.set(false);
         }
     };
 
@@ -28,21 +31,25 @@ fn App() -> impl IntoView {
                     greeting.get()
                 }}
             </h1>
-            <input
-                type="text"
-                class="px-4 py-2 rounded bg-slate-800 border border-slate-700"
-                on:input=move |ev| {
-                    set_name.set(event_target_value(&ev));
-                }
-                on:keypress=handle_keypress
-                prop:value=name
-            />
-            <button
-                class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
-                on:click=handle_submit
-            >
-                "Hello"
-            </button>
+            {move || show_form.get().then(|| view! {
+                <>
+                    <input
+                        type="text"
+                        class="px-4 py-2 rounded bg-slate-800 border border-slate-700"
+                        on:input=move |ev| {
+                            set_name.set(event_target_value(&ev));
+                        }
+                        on:keypress=handle_keypress
+                        prop:value=name
+                    />
+                    <button
+                        class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+                        on:click=handle_submit
+                    >
+                        "Hello"
+                    </button>
+                </>
+            })}
         </div>
     }
 }
