@@ -681,7 +681,7 @@ function __wbg_get_imports() {
         const ret = makeMutClosure(arg0, arg1, 63, __wbg_adapter_26);
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper1584 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper1586 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 96, __wbg_adapter_31);
         return ret;
     };
@@ -752,7 +752,7 @@ async function __wbg_init(module_or_path) {
     }
 
     if (typeof module_or_path === 'undefined') {
-        module_or_path = new URL('space-game_bg.wasm', import.meta.url);
+        module_or_path = new URL('spaces-game_bg.wasm', import.meta.url);
     }
     const imports = __wbg_get_imports();
 
