@@ -21,6 +21,12 @@ jobs:
         with:
           version: 'latest'
 
+      - name: Install tailwindcss
+        run: npm install -D tailwindcss
+
+      - name: Build tailwindcss
+        run: npx tailwindcss -i ./styles/tailwind.css -o ./dist/tailwind.css
+
       - name: Build
         run: |
           trunk build --release
