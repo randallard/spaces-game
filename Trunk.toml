@@ -1,10 +1,7 @@
-[build]
-target = "index.html"
-dist = "dist"
-public_url = "/space-game/"
-
 [serve]
+# The address to serve on.
+address = "127.0.0.1"
+# The port to serve on.
 port = 8080
-
-[watch]
-watch = ["src", "styles", "index.html"]
+# The path to serve at.
+path = "/"
