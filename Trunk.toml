@@ -1,13 +1,15 @@
 [serve]
-# The address to serve on.
 address = "127.0.0.1"
-# The port to serve on.
 port = 8080
-# The path to serve at.
 path = "/"
 
 [watch]
-ignore = ["./dist/tailwind.css"]
+watch = ["styles", "src"]
 
 [build]
 target = "index.html"
+
+[[hooks]]
+stage = "pre_build"
+command = "cmd"
+command_arguments = ["/C", "tailwindcss", "-i", "./styles/tailwind.css", "-o", "./dist/tailwind.css"]
