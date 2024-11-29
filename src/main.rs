@@ -3,6 +3,9 @@ use leptos::prelude::*;
 use web_sys::{MouseEvent, Storage, window};
 use serde::{Serialize, Deserialize};
 
+mod components;
+use components::board::BoardCreator;
+
 #[derive(Serialize, Deserialize)]
 struct UserData {
     name: String,
@@ -36,6 +39,7 @@ fn App() -> impl IntoView {
     let (name, set_name) = signal(String::new());
     let (greeting, set_greeting) = signal(String::new());
     let (show_form, set_show_form) = signal(true);
+    let (show_board_creator, set_show_board_creator) = signal(false);
 
     if let Some(data) = load_user_data() {
         set_name.set(data.name);
@@ -97,7 +101,21 @@ fn App() -> impl IntoView {
                     </div>
                     <div>
                         <h2 class="text-2xl font-bold mb-4">"Boards"</h2>
-                        <a href="#" class="text-blue-400 hover:text-blue-300 block mb-2">"+ Create New Board"</a>
+                        <a 
+                            href="#" 
+                            class="text-blue-400 hover:text-blue-300 block mb-2"
+                            on:click=move |ev| {
+                                ev.prevent_default();
+                                set_show_board_creator.set(true);
+                            }
+                        >
+                            "+ Create New Board"
+                        </a>
+                        {move || show_board_creator.get().then(|| view! {
+                            <BoardCreator 
+                                on_cancel=move || set_show_board_creator.set(false)
+                            />
+                        })}
                     </div>
                 </div>
             })}
