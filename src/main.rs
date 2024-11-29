@@ -89,6 +89,18 @@ fn App() -> impl IntoView {
                     </button>
                 </>
             })}
+            {move || (!show_form.get()).then(|| view! {
+                <div class="grid grid-cols-2 gap-8 w-full max-w-4xl px-4">
+                    <div>
+                        <h2 class="text-2xl font-bold mb-4">"Friends"</h2>
+                        <a href="#" class="text-blue-400 hover:text-blue-300 block mb-2">"+ Invite a Friend"</a>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold mb-4">"Boards"</h2>
+                        <a href="#" class="text-blue-400 hover:text-blue-300 block mb-2">"+ Create New Board"</a>
+                    </div>
+                </div>
+            })}
         </div>
     }
 }
