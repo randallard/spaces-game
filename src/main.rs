@@ -1,6 +1,35 @@
 use leptos::*;
 use leptos::prelude::*;
-use web_sys::MouseEvent;
+use web_sys::{MouseEvent, Storage, window};
+use serde::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize)]
+struct UserData {
+    name: String,
+    greeting: String,
+}
+
+fn get_local_storage() -> Option<Storage> {
+    window()?.local_storage().ok()?
+}
+
+fn load_user_data() -> Option<UserData> {
+    let storage = get_local_storage()?;
+    let data = storage.get_item("user_data").ok()??;
+    serde_json::from_str(&data).ok()
+}
+
+fn save_user_data(name: &str, greeting: &str) -> Result<(), serde_json::Error> {
+    if let Some(storage) = get_local_storage() {
+        let data = UserData {
+            name: name.to_string(),
+            greeting: greeting.to_string(),
+        };
+        let json = serde_json::to_string(&data)?;
+        let _ = storage.set_item("user_data", &json);
+    }
+    Ok(())
+}
 
 #[component]
 fn App() -> impl IntoView {
@@ -8,16 +37,26 @@ fn App() -> impl IntoView {
     let (greeting, set_greeting) = signal(String::new());
     let (show_form, set_show_form) = signal(true);
 
+    if let Some(data) = load_user_data() {
+        set_name.set(data.name);
+        set_greeting.set(data.greeting);
+        set_show_form.set(false);
+    }
+
     let handle_submit = move |_: MouseEvent| {
         if !name.get().is_empty() {
-            set_greeting.set(format!("Hello, {}!", name.get()));
+            let greeting_text = format!("Hello, {}!", name.get());
+            set_greeting.set(greeting_text.clone());
+            let _ = save_user_data(&name.get(), &greeting_text);
             set_show_form.set(false);
         }
     };
 
     let handle_keypress = move |ev: web_sys::KeyboardEvent| {
         if ev.key() == "Enter" && !name.get().is_empty() {
-            set_greeting.set(format!("Hello, {}!", name.get()));
+            let greeting_text = format!("Hello, {}!", name.get());
+            set_greeting.set(greeting_text.clone());
+            let _ = save_user_data(&name.get(), &greeting_text);
             set_show_form.set(false);
         }
     };
