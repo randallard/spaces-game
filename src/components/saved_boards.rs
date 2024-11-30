@@ -4,14 +4,24 @@ use leptos::prelude::*;
 use crate::components::utils::{delete_board,generate_thumbnail,load_saved_boards};
 use crate::components::board::SavedBoard;
 
-// In saved_boards.rs, modify the component:
+pub static BOARD_TRIGGER: std::sync::OnceLock<RwSignal<bool>> = std::sync::OnceLock::new();
+
+pub fn get_board_trigger() -> RwSignal<bool> {
+    *BOARD_TRIGGER.get_or_init(|| RwSignal::new(false))
+}
+
 #[component]
 pub fn SavedBoards() -> impl IntoView {
-    let boards = RwSignal::new(load_saved_boards().unwrap_or_default());
+    let trigger = get_board_trigger();
+    let boards = Memo::new(move |_| {
+        // Use trigger to force recomputation
+        trigger.get();
+        load_saved_boards().unwrap_or_default()
+    });
 
     let delete = move |index: usize| {
         let _ = delete_board(index);
-        boards.set(load_saved_boards().unwrap_or_default());
+        trigger.update(|v| *v = !*v);  // Toggle to trigger refresh
     };
 
     view! {

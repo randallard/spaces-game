@@ -5,7 +5,7 @@ use leptos::prelude::*;
 use serde::{Serialize, Deserialize};
 
 use crate::components::utils::{generate_thumbnail, save_board};
-
+use crate::components::saved_boards::get_board_trigger;
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub enum CellContent {
@@ -88,6 +88,7 @@ pub fn BoardCreator(
                         finished.set(true);
                         let current_board = board.get();
                         let _ = save_board(current_board);
+                        get_board_trigger().update(|v| *v = !*v);  // Toggle to trigger refresh
                         set_timeout(move || {
                             reset_board(&board, &current_turn, &finished);
                         }, Duration::from_millis(333));

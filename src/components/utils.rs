@@ -1,5 +1,5 @@
 use web_sys::window;
-
+use leptos::prelude::*;
 use std::fmt::Write;
 use super::board::{Board, CellContent, SavedBoard};
 
@@ -57,21 +57,19 @@ pub fn generate_thumbnail(board: &Board) -> String {
     format!(r#"data:image/svg+xml,{}"#, urlencoding::encode(&svg))
 }
 
-pub fn save_board(board: Board) -> Result<(), serde_json::Error> {
+pub fn save_board(board: Board) -> Result<Vec<SavedBoard>, serde_json::Error> {
     let storage = window().unwrap().local_storage().unwrap().unwrap();
     let thumbnail = generate_thumbnail(&board);
     let saved_board = SavedBoard { board, thumbnail };    
 
     // Load existing boards first
     let mut saved_boards = load_saved_boards().unwrap_or_default();
-    web_sys::console::log_1(&format!("Current boards: {}", saved_boards.len()).into());
-    
     saved_boards.push(saved_board);
-    web_sys::console::log_1(&format!("After adding: {}", saved_boards.len()).into());
     
     let json = serde_json::to_string(&saved_boards)?;
     storage.set_item("saved_boards", &json).unwrap();
-    Ok(())
+
+    Ok(saved_boards)
 }
 
 pub fn load_saved_boards() -> Option<Vec<SavedBoard>> {
