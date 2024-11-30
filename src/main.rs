@@ -1,5 +1,6 @@
 use leptos::*;
 use leptos::prelude::*;
+use leptos::logging::log;
 use web_sys::{MouseEvent, Storage, window};
 use serde::{Serialize, Deserialize};
 
@@ -124,20 +125,35 @@ fn App() -> impl IntoView {
                             children=move |opponent: Opponent| {
                                 view! {
                                     <div class="flex items-center justify-between p-2 bg-slate-800 rounded">
-                                        <div class="flex items-center gap-2 text-gray-300">
-                                            <span class="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-xs">
-                                                {if matches!(opponent.opponent_type, OpponentType::Computer) { "C" } else { "H" }}
-                                            </span>
-                                            {opponent.name.clone()}
-                                        </div>
-                                        <button
-                                            class="text-red-400 hover:text-red-300 opacity-50 hover:opacity-100 transition-opacity"
-                                            on:click=move |_| opponent_to_delete.set(Some(opponent.clone()))
-                                        >
-                                            "Remove"
-                                        </button>
+                                    <div class="flex items-center gap-2 text-gray-300">
+                                        <span class="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-xs">
+                                            {if matches!(opponent.opponent_type, OpponentType::Computer) { "C" } else { "H" }}
+                                        </span>
+                                        {opponent.name.clone()}
                                     </div>
-                                }
+                                    <div class="flex gap-2">
+                                        {
+                                            let play_opponent = opponent.clone();
+                                            let delete_opponent = opponent.clone();
+                                            view! {
+                                                <button
+                                                    class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm"
+                                                    on:click=move |_| {
+                                                        log!("Starting game with {}", play_opponent.name);
+                                                    }
+                                                >
+                                                    "Play"
+                                                </button>
+                                                <button
+                                                    class="text-red-400 hover:text-red-300 opacity-50 hover:opacity-100 transition-opacity"
+                                                    on:click=move |_| opponent_to_delete.set(Some(delete_opponent.clone()))
+                                                >
+                                                    "Remove"
+                                                </button>
+                                            }
+                                        }
+                                    </div>
+                                </div>                                }
                             }
                         />
                     </div>
