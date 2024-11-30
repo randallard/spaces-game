@@ -43,15 +43,12 @@ pub fn BoardCreator(
             // Subsequent turns - allow placing trap or moving player
             let player_pos = find_player(&current_board);
             if let Some((player_row, player_col)) = player_pos {
-                if is_adjacent(player_row, player_col, row, col) {
-                    if row == 0 {
-                        // Reached top row - game can be finished
-                        current_board.grid[row][col] = CellContent::Player;
-                        board.set(current_board);
+                if player_row == 0 || is_adjacent(player_row, player_col, row, col) {
+                    if row == usize::MAX {  // Special case for final move
                         finished.set(true);
                     } else {
-                        current_board.grid[row][col] = CellContent::Player;
                         current_board.grid[player_row][player_col] = CellContent::Empty;
+                        current_board.grid[row][col] = CellContent::Player;
                         board.set(current_board);
                         current_turn.update(|t| *t += 1);
                     }
@@ -65,6 +62,25 @@ pub fn BoardCreator(
 
     view! {
         <div class="flex flex-col gap-4">
+            {move || {
+                let player_pos = find_player(&board.get());
+                if let Some((row, _)) = player_pos {
+                    if row == 0 {
+                        view! {
+                            <button
+                                class="w-full h-8 bg-green-600 hover:bg-green-700 rounded mb-2"
+                                on:click=move |_| handle_cell_click(usize::MAX, 0)
+                            >
+                                "Final Move"
+                            </button>
+                        }.into_any()
+                    } else {
+                        view! { <div class="h-8 mb-2"></div> }.into_any()
+                    }
+                } else {
+                    view! { <div class="h-8 mb-2"></div> }.into_any()
+                }
+            }}        
             <div class="grid grid-cols-2 gap-1 bg-slate-800 p-2 rounded">
                 <For
                     each=rows
