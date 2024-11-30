@@ -109,7 +109,7 @@ pub fn BoardCreator(
                                             view! { <span>"Start"</span> }.into_any()
                                         } else if let Some((p_row, p_col)) = find_player(&board.get()) {
                                             match board.get().grid[row][col] {
-                                                CellContent::Empty if is_adjacent(p_row, p_col, row, col) => 
+                                                CellContent::Empty if is_adjacent(p_row, p_col, row, col) && row <= p_row => 
                                                     view! {
                                                         <div class="flex flex-col gap-1">
                                                             <button class="px-2 py-1 bg-blue-600 rounded text-sm"
@@ -134,7 +134,7 @@ pub fn BoardCreator(
                                                     CellContent::Trap => view! { <span>"×"</span> }.into_any(),
                                             }
                                         } else {
-                                            view! { <span>"·"</span> }.into_any()
+                                            view! { <span>" "</span> }.into_any()
                                         }
                                     }}
                                     </button>
@@ -161,11 +161,6 @@ pub fn BoardCreator(
                 >
                     "Cancel"
                 </button>
-                {move || finished.get().then(|| view! {
-                    <button class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">
-                        "Save Board"
-                    </button>
-                })}
             </div>
         </div>
     }
