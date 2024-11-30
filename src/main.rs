@@ -15,6 +15,7 @@ use components::opponent::{
 struct UserData {
     name: String,
     greeting: String,
+    default_game_speed: GameSpeed, // Add this
 }
 
 fn get_local_storage() -> Option<Storage> {
@@ -27,11 +28,12 @@ fn load_user_data() -> Option<UserData> {
     serde_json::from_str(&data).ok()
 }
 
-fn save_user_data(name: &str, greeting: &str) -> Result<(), serde_json::Error> {
+fn save_user_data(name: &str, greeting: &str, speed: GameSpeed) -> Result<(), serde_json::Error> {
     if let Some(storage) = get_local_storage() {
         let data = UserData {
             name: name.to_string(),
             greeting: greeting.to_string(),
+            default_game_speed: speed,
         };
         let json = serde_json::to_string(&data)?;
         let _ = storage.set_item("user_data", &json);
@@ -44,6 +46,8 @@ fn App() -> impl IntoView {
     let (name, set_name) = signal(String::new());
     let (greeting, set_greeting) = signal(String::new());
     let (show_form, set_show_form) = signal(true);
+    let (show_profile, set_show_profile) = signal(false);
+    let (default_game_speed, set_default_game_speed) = signal(GameSpeed::Quick);
     let (show_game, set_show_game) = signal(None::<Opponent>);
     let (show_board_creator, set_show_board_creator) = signal(false);
     let opponent_to_delete = RwSignal::new(None::<Opponent>);
@@ -63,7 +67,7 @@ fn App() -> impl IntoView {
         if !name.get().is_empty() {
             let greeting_text = format!("Hello, {}!", name.get());
             set_greeting.set(greeting_text.clone());
-            let _ = save_user_data(&name.get(), &greeting_text);
+            let _ = save_user_data(&name.get(), &greeting_text, GameSpeed::Relaxed);
             set_show_form.set(false);
         }
     };
@@ -72,7 +76,7 @@ fn App() -> impl IntoView {
         if ev.key() == "Enter" && !name.get().is_empty() {
             let greeting_text = format!("Hello, {}!", name.get());
             set_greeting.set(greeting_text.clone());
-            let _ = save_user_data(&name.get(), &greeting_text);
+            let _ = save_user_data(&name.get(), &greeting_text, GameSpeed::Relaxed);
             set_show_form.set(false);
         }
     };
@@ -107,6 +111,14 @@ fn App() -> impl IntoView {
             })}
             {move || (!show_form.get()).then(|| view! {
                 <div class="grid grid-cols-2 gap-8 w-full max-w-4xl px-4">
+                    <div class="flex justify-end">
+                    <button
+                        class="text-blue-400 hover:text-blue-300 text-sm"
+                        on:click=move |_| set_show_profile.set(true)
+                    >
+                        "Edit Profile"
+                    </button>
+                </div>
                 <div>
                     <h2 class="text-2xl font-bold mb-4">"Opponents"</h2>
                     <div class="flex flex-col gap-2">
@@ -267,6 +279,91 @@ fn App() -> impl IntoView {
                 opponent=opponent
                 on_exit=move || set_show_game.set(None)
             />
+        })}
+        {move || show_profile.get().then(|| view! {
+            <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-slate-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4 text-white">
+                    <h3 class="text-xl font-bold mb-4">"Edit Profile"</h3>
+                    <div class="flex flex-col gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">
+                                "Username"
+                            </label>
+                            <input
+                                type="text"
+                                class="w-full px-4 py-2 rounded bg-slate-700 border border-slate-600 text-white"
+                                prop:value=name
+                                on:input=move |ev| set_name.set(event_target_value(&ev))
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">
+                                "Default Game Speed"
+                            </label>
+                            <select
+                                class="w-full px-4 py-2 rounded bg-slate-700 border border-slate-600 text-white"
+                                on:change=move |ev| {
+                                    match event_target_value(&ev).as_str() {
+                                        "lightning" => set_default_game_speed.set(GameSpeed::Lightning),
+                                        "quick" => set_default_game_speed.set(GameSpeed::Quick),
+                                        "relaxed" => set_default_game_speed.set(GameSpeed::Relaxed),
+                                        "chill" => set_default_game_speed.set(GameSpeed::Chill),
+                                        _ => (),
+                                    }
+                                }
+                            >
+                                <option 
+                                    value="lightning" 
+                                    selected=move || matches!(default_game_speed.get(), GameSpeed::Lightning)
+                                    class="text-white bg-slate-700"
+                                >
+                                    "Lightning! (1s to choose)"
+                                </option>
+                                <option 
+                                    value="quick"
+                                    selected=move || matches!(default_game_speed.get(), GameSpeed::Quick)
+                                    class="text-white bg-slate-700"
+                                >
+                                    "Quick! (5s to choose)"
+                                </option>
+                                <option 
+                                    value="relaxed"
+                                    selected=move || matches!(default_game_speed.get(), GameSpeed::Relaxed)
+                                    class="text-white bg-slate-700"
+                                >
+                                    "Relaxed (10s to choose)"
+                                </option>
+                                <option 
+                                    value="chill"
+                                    selected=move || matches!(default_game_speed.get(), GameSpeed::Chill)
+                                    class="text-white bg-slate-700"
+                                >
+                                    "Totally Chill (no limit)"
+                                </option>
+                            </select>
+                        </div>
+                        <div class="flex justify-end gap-4 mt-2">
+                            <button
+                                class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+                                on:click=move |_| set_show_profile.set(false)
+                            >
+                                "Cancel"
+                            </button>
+                            <button
+                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
+                                on:click=move |_| {
+                                    let greeting_text = format!("Hello, {}!", name.get());
+                                    set_greeting.set(greeting_text.clone());
+                                    let _ = save_user_data(&name.get(), &greeting_text, default_game_speed.get());
+                                    set_show_profile.set(false);
+                                }
+                            >
+                                "Save Changes"
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         })}
     }
 }
