@@ -160,7 +160,7 @@ fn App() -> impl IntoView {
 
                     // Confirmation Dialog
                     {move || opponent_to_delete.get().map(|opponent| view! {
-                        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                             <div class="bg-slate-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
                                 <h3 class="text-xl font-bold mb-4">"Confirm Removal"</h3>
                                 <p class="text-gray-300 mb-6">
