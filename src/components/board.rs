@@ -74,21 +74,23 @@ pub fn BoardCreator(
                             <For
                                 each=cols
                                 key=|col| *col
-                                children=move |col| {
-                                    let cell_content = move || {
-                                        match board.get().grid[row][col] {
-                                            CellContent::Empty => "·",
-                                            CellContent::Player => "○",
-                                            CellContent::Trap => "×",
-                                        }
-                                    };
-                                    
+                                children=move |col| {                                    
                                     view! {
                                         <button
                                             class="w-16 h-16 flex items-center justify-center bg-slate-700 hover:bg-slate-600 text-2xl"
                                             on:click=move |_| handle_cell_click(row, col)
                                         >
-                                            {cell_content()}
+                                            {move || {
+                                                if current_turn.get() == 0 && row == board.get().size - 1 {
+                                                    "Start"
+                                                } else {
+                                                    match board.get().grid[row][col] {
+                                                        CellContent::Empty => "",
+                                                        CellContent::Player => "○",
+                                                        CellContent::Trap => "×",
+                                                    }
+                                                }
+                                            }}
                                         </button>
                                     }
                                 }
@@ -99,11 +101,11 @@ pub fn BoardCreator(
             </div>
             <div class="text-gray-300">
                 {move || if current_turn.get() == 0 {
-                    "Place your piece in the bottom row"
+                    "Choose a starting square"
                 } else if finished.get() {
                     "Board complete!"
                 } else {
-                    "Move your piece or place a trap in adjacent squares"
+                    "Select an adjascent square to move your piece or place a trap."
                 }}
             </div>
             <div class="flex gap-2">
