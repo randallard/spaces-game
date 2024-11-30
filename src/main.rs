@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 
 mod components;
 use components::board::BoardCreator;
-use components::game::Game;
+use components::game::{Game, GameSpeed, GameState};
 use components::saved_boards::SavedBoards;
 use components::opponent::{
     delete_opponent, Opponent, OpponentType, load_opponents, save_opponent
@@ -137,15 +137,52 @@ fn App() -> impl IntoView {
                                             let play_opponent = opponent.clone();
                                             let delete_opponent = opponent.clone();
                                             view! {
-                                                <button
-                                                    class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm"
-                                                    on:click=move |_| {
-                                                        let opponent = play_opponent.clone();
-                                                        set_show_game.set(Some(opponent));
+                                                <div class="relative group">
+                                                {
+                                                    let opponent_quick = opponent.clone();
+                                                    let opponent_relaxed = opponent.clone();
+                                                    let opponent_chill = opponent.clone();
+                                                    view! {
+                                                        <button
+                                                            class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm"
+                                                        >
+                                                            "Play ▾"
+                                                        </button>
+                                                        <div class="absolute hidden group-hover:block right-0 mt-1 bg-slate-700 rounded shadow-lg z-10">
+                                                            <button
+                                                                class="block w-full text-left px-4 py-2 hover:bg-slate-600 text-sm"
+                                                                on:click=move |_| {
+                                                                    let mut game_state = GameState::new(name.get(), opponent_quick.clone());
+                                                                    game_state.speed = GameSpeed::Quick;
+                                                                    set_show_game.set(Some(opponent_quick.clone()));
+                                                                }
+                                                            >
+                                                                "Quick! (3s)"
+                                                            </button>
+                                                            <button
+                                                                class="block w-full text-left px-4 py-2 hover:bg-slate-600 text-sm"
+                                                                on:click=move |_| {
+                                                                    let mut game_state = GameState::new(name.get(), opponent_relaxed.clone());
+                                                                    game_state.speed = GameSpeed::Relaxed;
+                                                                    set_show_game.set(Some(opponent_relaxed.clone()));
+                                                                }
+                                                            >
+                                                                "Relaxed (10s)"
+                                                            </button>
+                                                            <button
+                                                                class="block w-full text-left px-4 py-2 hover:bg-slate-600 text-sm"
+                                                                on:click=move |_| {
+                                                                    let mut game_state = GameState::new(name.get(), opponent_chill.clone());
+                                                                    game_state.speed = GameSpeed::Chill;
+                                                                    set_show_game.set(Some(opponent_chill.clone()));
+                                                                }
+                                                            >
+                                                                "Totally Chill"
+                                                            </button>
+                                                        </div>
                                                     }
-                                                >
-                                                    "Play"
-                                                </button>
+                                                }
+                                            </div>
                                                 <button
                                                     class="text-red-400 hover:text-red-300 opacity-50 hover:opacity-100 transition-opacity"
                                                     on:click=move |_| opponent_to_delete.set(Some(delete_opponent.clone()))

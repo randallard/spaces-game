@@ -13,7 +13,15 @@ pub enum GamePhase {
     ShowingResults,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+// Add this near the top with other enums
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
+pub enum GameSpeed {
+    Quick,    // 3 seconds
+    Relaxed,  // 10 seconds
+    Chill,    // No limit
+}
+
+#[derive(Clone)]
 pub struct GameState {
     pub player1: String,
     pub player2: Option<Opponent>,
@@ -22,9 +30,11 @@ pub struct GameState {
     pub player2_score: i32,
     pub player1_board: Option<SavedBoard>,
     pub player2_board: Option<SavedBoard>,
-    pub phase: GamePhase,  // Add this
+    pub phase: GamePhase,
+    pub speed: GameSpeed,  // Add this line
 }
 
+// Update the new() function
 impl GameState {
     pub fn new(player_name: String, opponent: Opponent) -> Self {
         GameState {
@@ -35,7 +45,8 @@ impl GameState {
             player2_score: 0,
             player1_board: None,
             player2_board: None,
-            phase: GamePhase::SelectingBoards,  // Add this
+            phase: GamePhase::SelectingBoards,
+            speed: GameSpeed::Quick,  // Default to Quick
         }
     }
 }
