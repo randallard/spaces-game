@@ -6,6 +6,9 @@ use serde::{Serialize, Deserialize};
 mod components;
 use components::board::BoardCreator;
 use components::saved_boards::SavedBoards;
+use components::opponent::{
+    delete_opponent, Opponent, OpponentType, load_opponents, save_opponent
+};
 
 #[derive(Serialize, Deserialize)]
 struct UserData {
@@ -41,6 +44,12 @@ fn App() -> impl IntoView {
     let (greeting, set_greeting) = signal(String::new());
     let (show_form, set_show_form) = signal(true);
     let (show_board_creator, set_show_board_creator) = signal(false);
+    let opponent_to_delete = RwSignal::new(None::<Opponent>);
+    let opponents_trigger = RwSignal::new(false);
+    let opponents = Memo::new(move |_| {
+        opponents_trigger.get();
+        load_opponents().unwrap_or_default()
+    });
 
     if let Some(data) = load_user_data() {
         set_name.set(data.name);
@@ -96,10 +105,75 @@ fn App() -> impl IntoView {
             })}
             {move || (!show_form.get()).then(|| view! {
                 <div class="grid grid-cols-2 gap-8 w-full max-w-4xl px-4">
-                    <div>
-                        <h2 class="text-2xl font-bold mb-4">"Friends"</h2>
-                        <a href="#" class="text-blue-400 hover:text-blue-300 block mb-2">"+ Invite a Friend"</a>
+                <div>
+                    <h2 class="text-2xl font-bold mb-4">"Opponents"</h2>
+                    <div class="flex flex-col gap-2">
+                        <button
+                            class="text-blue-400 hover:text-blue-300 text-left"
+                            on:click=move |_| {
+                                let opponent = Opponent::new("Random CPU".to_string(), OpponentType::Computer);
+                                let _ = save_opponent(opponent);
+                                opponents_trigger.update(|v| *v = !*v);
+                            }
+                        >
+                            "+ Add CPU Opponent"
+                        </button>
+                        <For
+                            each=move || opponents.get()
+                            key=|opponent| opponent.id.clone()
+                            children=move |opponent: Opponent| {
+                                view! {
+                                    <div class="flex items-center justify-between p-2 bg-slate-800 rounded">
+                                        <div class="flex items-center gap-2 text-gray-300">
+                                            <span class="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-xs">
+                                                {if matches!(opponent.opponent_type, OpponentType::Computer) { "C" } else { "H" }}
+                                            </span>
+                                            {opponent.name.clone()}
+                                        </div>
+                                        <button
+                                            class="text-red-400 hover:text-red-300 opacity-50 hover:opacity-100 transition-opacity"
+                                            on:click=move |_| opponent_to_delete.set(Some(opponent.clone()))
+                                        >
+                                            "Remove"
+                                        </button>
+                                    </div>
+                                }
+                            }
+                        />
                     </div>
+
+                    // Confirmation Dialog
+                    {move || opponent_to_delete.get().map(|opponent| view! {
+                        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                            <div class="bg-slate-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+                                <h3 class="text-xl font-bold mb-4">"Confirm Removal"</h3>
+                                <p class="text-gray-300 mb-6">
+                                    "Are you sure you want to remove "
+                                    <span class="font-semibold">{opponent.name.clone()}</span>
+                                    " from your opponents list?"
+                                </p>
+                                <div class="flex justify-end gap-4">
+                                    <button
+                                        class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+                                        on:click=move |_| opponent_to_delete.set(None)
+                                    >
+                                        "Cancel"
+                                    </button>
+                                    <button
+                                        class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded"
+                                        on:click=move |_| {
+                                            let _ = delete_opponent(&opponent.id);
+                                            opponents_trigger.update(|v| *v = !*v);
+                                            opponent_to_delete.set(None);
+                                        }
+                                    >
+                                        "Remove"
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    })}
+                </div>
                     <div>
                         <h2 class="text-2xl font-bold mb-4">"Boards"</h2>
                         <a 
