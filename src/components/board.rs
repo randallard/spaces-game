@@ -1,20 +1,24 @@
+use std::time::Duration;
+
 use leptos::*;
 use leptos::prelude::*;
 use serde::{Serialize, Deserialize};
 
-use crate::components::utils::generate_thumbnail;
+use crate::components::utils::{generate_thumbnail, save_board};
 
-#[derive(Clone, Serialize, Deserialize)]
+
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub enum CellContent {
     Empty,
     Player,
     Trap,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Board {
     pub grid: Vec<Vec<CellContent>>,
     pub size: usize,
+    pub moves: Vec<(usize,usize)>
 }
 
 impl Board {
@@ -22,8 +26,43 @@ impl Board {
         Board {
             grid: vec![vec![CellContent::Empty; size]; size],
             size,
+            moves: Vec::new(),
         }
     }
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
+pub struct SavedBoard {
+    pub board: Board,
+    pub thumbnail: String,
+}
+
+fn reset_board(
+    board: &RwSignal<Board>,
+    current_turn: &RwSignal<usize>,
+    finished: &RwSignal<bool>
+) {
+    board.set(Board::new(2));
+    current_turn.set(0);
+    finished.set(false);
+}
+
+fn has_valid_moves(board: &Board) -> bool {
+    if let Some((player_row, player_col)) = find_player(board) {
+        if player_row == 0 {
+            return true;
+        }
+        for i in 0..board.size {
+            for j in 0..board.size {
+                if matches!(board.grid[i][j], CellContent::Empty) 
+                    && is_adjacent(player_row, player_col, i, j) 
+                    && i <= player_row {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 #[component]
@@ -37,20 +76,25 @@ pub fn BoardCreator(
     let handle_cell_click = move |row: usize, col: usize| {
         let mut current_board = board.get();
         if current_turn.get() == 0 && row == current_board.size - 1 {
-            // First turn - only allow placing player in bottom row
             current_board.grid[row][col] = CellContent::Player;
+            current_board.moves.push((row,col));
             board.set(current_board);
             current_turn.set(1);
         } else if !finished.get() {
-            // Subsequent turns - allow placing trap or moving player
             let player_pos = find_player(&current_board);
             if let Some((player_row, player_col)) = player_pos {
                 if player_row == 0 || is_adjacent(player_row, player_col, row, col) {
                     if row == usize::MAX {  // Special case for final move
                         finished.set(true);
+                        let current_board = board.get();
+                        let _ = save_board(current_board);
+                        set_timeout(move || {
+                            reset_board(&board, &current_turn, &finished);
+                        }, Duration::from_millis(333));
                     } else {
                         current_board.grid[player_row][player_col] = CellContent::Empty;
                         current_board.grid[row][col] = CellContent::Player;
+                        current_board.moves.push((row,col));
                         board.set(current_board);
                         current_turn.update(|t| *t += 1);
                     }
@@ -66,8 +110,18 @@ pub fn BoardCreator(
         <div class="flex flex-col gap-4">
             {move || {
                 let player_pos = find_player(&board.get());
-                if let Some((row, _)) = player_pos {
-                    if row == 0 {
+                if let Some((row, _col)) = player_pos {
+                    let has_valid_moves = has_valid_moves(&board.get());
+                    if !has_valid_moves {
+                        view! {
+                            <button
+                                class="w-full h-8 bg-red-600 hover:bg-red-700 rounded mb-2"
+                                on:click=move |_| reset_board(&board, &current_turn, &finished)
+                            >
+                                "You're trapped! Reset and try again"
+                            </button>
+                        }.into_any()
+                    } else if row == 0 {
                         view! {
                             <button
                                 class="w-full h-8 bg-green-600 hover:bg-green-700 rounded mb-2"
