@@ -116,8 +116,8 @@ fn App() -> impl IntoView {
                             <BoardCreator 
                                 on_cancel=move || set_show_board_creator.set(false)
                             />
-                            <SavedBoards/>
                         })}
+                        <SavedBoards/>
                     </div>
                 </div>
             })}
