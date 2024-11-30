@@ -134,50 +134,60 @@ fn App() -> impl IntoView {
                                     </div>
                                     <div class="flex gap-2">
                                         {
-                                            let play_opponent = opponent.clone();
                                             let delete_opponent = opponent.clone();
                                             view! {
                                                 <div class="relative group">
                                                 {
+                                                    let opponent_lightning = opponent.clone();
                                                     let opponent_quick = opponent.clone();
                                                     let opponent_relaxed = opponent.clone();
                                                     let opponent_chill = opponent.clone();
                                                     view! {
                                                         <button
-                                                            class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm"
+                                                            class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded-t text-sm"
                                                         >
-                                                            "Play ▾"
+                                                            "Play\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}▾"
                                                         </button>
-                                                        <div class="absolute hidden group-hover:block right-0 mt-1 bg-slate-700 rounded shadow-lg z-10">
+                                                        <div class="absolute hidden group-hover:block right-0 bg-green-600 rounded-b shadow-lg z-10">
                                                             <button
-                                                                class="block w-full text-left px-4 py-2 hover:bg-slate-600 text-sm"
+                                                                class="block w-full text-left px-3 py-1 hover:bg-green-700 text-sm border-t border-green-700"
+                                                                on:click=move |_| {
+                                                                    let mut game_state = GameState::new(name.get(), opponent_lightning.clone());
+                                                                    game_state.speed = GameSpeed::Lightning;
+                                                                    set_show_game.set(Some(opponent_lightning.clone()));
+                                                                }
+                                                            >
+                                                                "Lightning!\u{00A0}(1s\u{00A0}to\u{00A0}choose)"
+                                                            </button>
+                                                            <button
+                                                                class="block w-full text-left px-3 py-1 hover:bg-green-700 text-sm border-t border-green-700"
                                                                 on:click=move |_| {
                                                                     let mut game_state = GameState::new(name.get(), opponent_quick.clone());
                                                                     game_state.speed = GameSpeed::Quick;
                                                                     set_show_game.set(Some(opponent_quick.clone()));
                                                                 }
                                                             >
-                                                                "Quick! (3s)"
+                                                                "Quick!\u{00A0}(5s\u{00A0}to\u{00A0}choose)"
                                                             </button>
                                                             <button
-                                                                class="block w-full text-left px-4 py-2 hover:bg-slate-600 text-sm"
+                                                                class="block w-full text-left px-3 py-1 hover:bg-green-700 text-sm border-t border-green-700"
                                                                 on:click=move |_| {
                                                                     let mut game_state = GameState::new(name.get(), opponent_relaxed.clone());
                                                                     game_state.speed = GameSpeed::Relaxed;
                                                                     set_show_game.set(Some(opponent_relaxed.clone()));
                                                                 }
                                                             >
-                                                                "Relaxed (10s)"
+                                                                "Relaxed\u{00A0}(10s\u{00A0}to\u{00A0}choose)"
                                                             </button>
                                                             <button
-                                                                class="block w-full text-left px-4 py-2 hover:bg-slate-600 text-sm"
+                                                                class="block w-full text-left px-3 py-1 hover:bg-green-700 text-sm border-t border-green-700"
                                                                 on:click=move |_| {
                                                                     let mut game_state = GameState::new(name.get(), opponent_chill.clone());
                                                                     game_state.speed = GameSpeed::Chill;
                                                                     set_show_game.set(Some(opponent_chill.clone()));
                                                                 }
                                                             >
-                                                                "Totally Chill"
+                                                                "Totally\u{00A0}Chill\u{00A0}(no\u{00A0}limit)"
                                                             </button>
                                                         </div>
                                                     }

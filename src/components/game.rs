@@ -16,7 +16,8 @@ pub enum GamePhase {
 // Add this near the top with other enums
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub enum GameSpeed {
-    Quick,    // 3 seconds
+    Lightning, // 1 second
+    Quick,    // 5 seconds
     Relaxed,  // 10 seconds
     Chill,    // No limit
 }
