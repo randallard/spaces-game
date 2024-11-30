@@ -2,6 +2,8 @@ use leptos::*;
 use leptos::prelude::*;
 use serde::{Serialize, Deserialize};
 
+use crate::components::utils::generate_thumbnail;
+
 #[derive(Clone, Serialize, Deserialize)]
 pub enum CellContent {
     Empty,
@@ -11,8 +13,8 @@ pub enum CellContent {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Board {
-    grid: Vec<Vec<CellContent>>,
-    size: usize,
+    pub grid: Vec<Vec<CellContent>>,
+    pub size: usize,
 }
 
 impl Board {
@@ -162,6 +164,16 @@ pub fn BoardCreator(
                     "Cancel"
                 </button>
             </div>
+            {move || finished.get().then(|| view! {
+                <div class="mt-4">
+                    <h3 class="text-lg font-bold mb-2">"Board Preview"</h3>
+                    <img 
+                        src=move || generate_thumbnail(&board.get())
+                        alt="Board thumbnail" 
+                        class="w-24 h-24 rounded border border-slate-700"
+                    />
+                </div>
+            })}
         </div>
     }
 }
