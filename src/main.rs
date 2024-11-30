@@ -1,11 +1,11 @@
 use leptos::*;
 use leptos::prelude::*;
-use leptos::logging::log;
 use web_sys::{MouseEvent, Storage, window};
 use serde::{Serialize, Deserialize};
 
 mod components;
 use components::board::BoardCreator;
+use components::game::Game;
 use components::saved_boards::SavedBoards;
 use components::opponent::{
     delete_opponent, Opponent, OpponentType, load_opponents, save_opponent
@@ -44,6 +44,7 @@ fn App() -> impl IntoView {
     let (name, set_name) = signal(String::new());
     let (greeting, set_greeting) = signal(String::new());
     let (show_form, set_show_form) = signal(true);
+    let (show_game, set_show_game) = signal(None::<Opponent>);
     let (show_board_creator, set_show_board_creator) = signal(false);
     let opponent_to_delete = RwSignal::new(None::<Opponent>);
     let opponents_trigger = RwSignal::new(false);
@@ -139,7 +140,8 @@ fn App() -> impl IntoView {
                                                 <button
                                                     class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm"
                                                     on:click=move |_| {
-                                                        log!("Starting game with {}", play_opponent.name);
+                                                        let opponent = play_opponent.clone();
+                                                        set_show_game.set(Some(opponent));
                                                     }
                                                 >
                                                     "Play"
@@ -212,6 +214,13 @@ fn App() -> impl IntoView {
                 </div>
             })}
         </div>
+        {move || show_game.get().map(|opponent| view! {
+            <Game
+                player_name=name.get()
+                opponent=opponent
+                on_exit=move || set_show_game.set(None)
+            />
+        })}
     }
 }
 
