@@ -18,7 +18,7 @@ pub enum CellContent {
 pub struct Board {
     pub grid: Vec<Vec<CellContent>>,
     pub size: usize,
-    pub moves: Vec<(usize,usize)>
+    pub sequence: Vec<(usize, usize, CellContent)>  // Replace moves and traps
 }
 
 impl Board {
@@ -26,7 +26,7 @@ impl Board {
         Board {
             grid: vec![vec![CellContent::Empty; size]; size],
             size,
-            moves: Vec::new(),
+            sequence: Vec::new(),
         }
     }
 }
@@ -77,7 +77,7 @@ pub fn BoardCreator(
         let mut current_board = board.get();
         if current_turn.get() == 0 && row == current_board.size - 1 {
             current_board.grid[row][col] = CellContent::Player;
-            current_board.moves.push((row,col));
+            current_board.sequence.push((row, col, CellContent::Player));
             board.set(current_board);
             current_turn.set(1);
         } else if !finished.get() {
@@ -94,7 +94,7 @@ pub fn BoardCreator(
                     } else {
                         current_board.grid[player_row][player_col] = CellContent::Empty;
                         current_board.grid[row][col] = CellContent::Player;
-                        current_board.moves.push((row,col));
+                        current_board.sequence.push((row, col, CellContent::Player));
                         board.set(current_board);
                         current_turn.update(|t| *t += 1);
                     }
@@ -166,25 +166,31 @@ pub fn BoardCreator(
                                         } else if let Some((p_row, p_col)) = find_player(&board.get()) {
                                             match board.get().grid[row][col] {
                                                 CellContent::Empty if is_adjacent(p_row, p_col, row, col) && row <= p_row => 
-                                                    view! {
-                                                        <div class="flex flex-col gap-1">
-                                                            <button class="px-2 py-1 bg-blue-600 rounded text-sm"
-                                                                on:click=move |ev| {
-                                                                    ev.stop_propagation();
-                                                                    handle_cell_click(row, col)
-                                                                }
-                                                            >"Move"</button>
-                                                            <button class="px-2 py-1 bg-red-600 rounded text-sm"
-                                                                on:click=move |ev| {
-                                                                    ev.stop_propagation();
-                                                                    let mut current_board = board.get();
-                                                                    current_board.grid[row][col] = CellContent::Trap;
-                                                                    board.set(current_board);
-                                                                    current_turn.update(|t| *t += 1);
-                                                                }
-                                                            >"Trap"</button>
-                                                        </div>
-                                                    }.into_any(),
+                                                view! {
+                                                    <div class="flex flex-col gap-1">
+                                                        <button class="px-2 py-1 bg-blue-600 rounded text-sm"
+                                                            on:click=move |ev| {
+                                                                ev.stop_propagation();
+                                                                let mut current_board = board.get();
+                                                                current_board.grid[row][col] = CellContent::Player;
+                                                                current_board.grid[p_row][p_col] = CellContent::Empty;
+                                                                current_board.sequence.push((row, col, CellContent::Player));
+                                                                board.set(current_board);
+                                                                current_turn.update(|t| *t += 1);
+                                                            }
+                                                        >"Move"</button>
+                                                        <button class="px-2 py-1 bg-red-600 rounded text-sm"
+                                                            on:click=move |ev| {
+                                                                ev.stop_propagation();
+                                                                let mut current_board = board.get();
+                                                                current_board.grid[row][col] = CellContent::Trap;
+                                                                current_board.sequence.push((row, col, CellContent::Trap));
+                                                                board.set(current_board);
+                                                                current_turn.update(|t| *t += 1);
+                                                            }
+                                                        >"Trap"</button>
+                                                    </div>
+                                                }.into_any(),
                                                     CellContent::Empty => view! { <span>" "</span> }.into_any(),
                                                     CellContent::Player => view! { <span>"○"</span> }.into_any(),
                                                     CellContent::Trap => view! { <span>"×"</span> }.into_any(),

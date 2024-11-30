@@ -29,16 +29,28 @@ pub fn generate_thumbnail(board: &Board) -> String {
         }
     }
 
-    // Draw numbered circles for moves
-    for (idx, &(i, j)) in board.moves.iter().enumerate() {
+    for (idx, &(i, j, ref content)) in board.sequence.iter().enumerate() {
         let x = j as f32 * 45.0;
         let y = i as f32 * 45.0;
-        let _ = write!(
-            svg,
-            r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(37, 99, 235)"/>
-               <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-            x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
-        );
+        let _ = match content {
+            CellContent::Player => {
+                write!(
+                    svg,
+                    r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(37, 99, 235)"/>
+                       <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                    x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
+                )
+            },
+            CellContent::Trap => {
+                write!(
+                    svg,
+                    r#"<circle cx="{:.0}" cy="{:.0}" r="12" fill="rgb(220, 38, 38)"/>
+                       <text x="{:.0}" y="{:.0}" font-size="14" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                    x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
+                )
+            },
+            _ => Ok(()),
+        };
     }
 
     svg.push_str("</g></svg>");
