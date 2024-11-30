@@ -5,6 +5,7 @@ use serde::{Serialize, Deserialize};
 
 mod components;
 use components::board::BoardCreator;
+use components::saved_boards::SavedBoards;
 
 #[derive(Serialize, Deserialize)]
 struct UserData {
@@ -115,6 +116,7 @@ fn App() -> impl IntoView {
                             <BoardCreator 
                                 on_cancel=move || set_show_board_creator.set(false)
                             />
+                            <SavedBoards/>
                         })}
                     </div>
                 </div>
