@@ -77,21 +77,51 @@ pub fn BoardCreator(
                                 children=move |col| {                                    
                                     view! {
                                         <button
-                                            class="w-16 h-16 flex items-center justify-center bg-slate-700 hover:bg-slate-600 text-2xl"
-                                            on:click=move |_| handle_cell_click(row, col)
-                                        >
-                                            {move || {
-                                                if current_turn.get() == 0 && row == board.get().size - 1 {
-                                                    "Start"
-                                                } else {
-                                                    match board.get().grid[row][col] {
-                                                        CellContent::Empty => "",
-                                                        CellContent::Player => "○",
-                                                        CellContent::Trap => "×",
-                                                    }
-                                                }
-                                            }}
-                                        </button>
+                                        class="w-16 h-16 flex items-center justify-center bg-slate-700 hover:bg-slate-600 text-2xl"
+                                        disabled=move || {
+                                            if current_turn.get() == 0 {
+                                                row != board.get().size - 1
+                                            } else {
+                                                let player_pos = find_player(&board.get());
+                                                !matches!(player_pos, Some((p_row, p_col)) if is_adjacent(p_row, p_col, row, col))
+                                            }
+                                        }
+                                        on:click=move |_| handle_cell_click(row, col)
+                                    >
+                                    {move || {
+                                        if current_turn.get() == 0 && row == board.get().size - 1 {
+                                            view! { <span>"Start"</span> }.into_any()
+                                        } else if let Some((p_row, p_col)) = find_player(&board.get()) {
+                                            match board.get().grid[row][col] {
+                                                CellContent::Empty if is_adjacent(p_row, p_col, row, col) => 
+                                                    view! {
+                                                        <div class="flex flex-col gap-1">
+                                                            <button class="px-2 py-1 bg-blue-600 rounded text-sm"
+                                                                on:click=move |ev| {
+                                                                    ev.stop_propagation();
+                                                                    handle_cell_click(row, col)
+                                                                }
+                                                            >"Move"</button>
+                                                            <button class="px-2 py-1 bg-red-600 rounded text-sm"
+                                                                on:click=move |ev| {
+                                                                    ev.stop_propagation();
+                                                                    let mut current_board = board.get();
+                                                                    current_board.grid[row][col] = CellContent::Trap;
+                                                                    board.set(current_board);
+                                                                    current_turn.update(|t| *t += 1);
+                                                                }
+                                                            >"Trap"</button>
+                                                        </div>
+                                                    }.into_any(),
+                                                    CellContent::Empty => view! { <span>" "</span> }.into_any(),
+                                                    CellContent::Player => view! { <span>"○"</span> }.into_any(),
+                                                    CellContent::Trap => view! { <span>"×"</span> }.into_any(),
+                                            }
+                                        } else {
+                                            view! { <span>"·"</span> }.into_any()
+                                        }
+                                    }}
+                                    </button>
                                     }
                                 }
                             />
