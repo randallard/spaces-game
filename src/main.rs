@@ -57,6 +57,9 @@ fn App() -> impl IntoView {
         load_opponents().unwrap_or_default()
     });
 
+    let cpu_opponent = Opponent::new("CPU".to_string(), OpponentType::Computer);
+    let _ = save_opponent(cpu_opponent);
+
     if let Some(data) = load_user_data() {
         set_name.set(data.name);
         set_greeting.set(data.greeting);
@@ -90,6 +93,14 @@ fn App() -> impl IntoView {
                     greeting.get()
                 }}
             </h1>
+            {move || (!show_form.get()).then(|| view! {
+                <button
+                    class="text-blue-400 hover:text-blue-300 text-sm mb-4"
+                    on:click=move |_| set_show_profile.set(true)
+                >
+                    "Edit Profile"
+                </button>
+            })}
             {move || show_form.get().then(|| view! {
                 <>
                     <input
@@ -111,27 +122,9 @@ fn App() -> impl IntoView {
             })}
             {move || (!show_form.get()).then(|| view! {
                 <div class="grid grid-cols-2 gap-8 w-full max-w-4xl px-4">
-                    <div class="flex justify-end">
-                    <button
-                        class="text-blue-400 hover:text-blue-300 text-sm"
-                        on:click=move |_| set_show_profile.set(true)
-                    >
-                        "Edit Profile"
-                    </button>
-                </div>
                 <div>
                     <h2 class="text-2xl font-bold mb-4">"Opponents"</h2>
                     <div class="flex flex-col gap-2">
-                        <button
-                            class="text-blue-400 hover:text-blue-300 text-left"
-                            on:click=move |_| {
-                                let opponent = Opponent::new("Random CPU".to_string(), OpponentType::Computer);
-                                let _ = save_opponent(opponent);
-                                opponents_trigger.update(|v| *v = !*v);
-                            }
-                        >
-                            "+ Add CPU Opponent"
-                        </button>
                         <For
                             each=move || opponents.get()
                             key=|opponent| opponent.id.clone()
@@ -253,16 +246,18 @@ fn App() -> impl IntoView {
                 </div>
                     <div>
                         <h2 class="text-2xl font-bold mb-4">"Boards"</h2>
-                        <a 
-                            href="#" 
-                            class="text-blue-400 hover:text-blue-300 block mb-2"
-                            on:click=move |ev| {
-                                ev.prevent_default();
-                                set_show_board_creator.set(true);
-                            }
-                        >
-                            "+ Create New Board"
-                        </a>
+                        {move || (!show_board_creator.get()).then(|| view! {
+                            <a 
+                                href="#" 
+                                class="text-blue-400 hover:text-blue-300 block mb-2"
+                                on:click=move |ev| {
+                                    ev.prevent_default();
+                                    set_show_board_creator.set(true);
+                                }
+                            >
+                                "+ Create New Board"
+                            </a>
+                        })}
                         {move || show_board_creator.get().then(|| view! {
                             <BoardCreator 
                                 on_cancel=move || set_show_board_creator.set(false)
