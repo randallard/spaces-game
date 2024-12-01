@@ -138,6 +138,158 @@ pub fn delete_board(index: usize) -> Result<(), serde_json::Error> {
     Ok(())
 }
 
+fn initialize_game_board_svg(board_size: usize) -> String {
+    let mut svg = String::from(r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <rect width="100" height="100" fill="rgb(30, 41, 59)"/>
+            <g transform="translate(5,5)">"#);
+
+    // Draw grid
+    for i in 0..board_size {
+        for j in 0..board_size {
+            let x = j as f32 * 45.0;
+            let y = i as f32 * 45.0;
+            let _ = write!(
+                svg,
+                r#"<rect x="{}" y="{}" width="40" height="40" fill="rgb(51, 65, 85)"/>"#,
+                x, y
+            );
+        }
+    }
+
+    svg
+}
+
+fn draw_collision_starburst(svg: &mut String, center_x: f32, center_y: f32, idx: usize) {
+    let _ = write!(
+        svg,
+        r#"
+        <g>
+            <!-- Blue rays (player) -->
+            <path d="M{x} {y} l-15 0 M{x} {y} l15 0"
+                  stroke="rgb(37, 99, 235)" stroke-width="4">
+                <animate attributeName="stroke-width" 
+                         values="4;8;4" 
+                         dur="0.5s" 
+                         repeatCount="2"/>
+            </path>
+            <!-- Purple rays (opponent) -->
+            <path d="M{x} {y} l0 -15 M{x} {y} l0 15"
+                  stroke="rgb(147, 51, 234)" stroke-width="4">
+                <animate attributeName="stroke-width" 
+                         values="4;8;4" 
+                         dur="0.5s" 
+                         repeatCount="2"/>
+            </path>
+            <!-- Blue diagonal rays -->
+            <path d="M{x} {y} l-10 -10 M{x} {y} l10 10"
+                  stroke="rgb(37, 99, 235)" stroke-width="4">
+                <animate attributeName="stroke-width" 
+                         values="4;8;4" 
+                         dur="0.5s" 
+                         repeatCount="2"/>
+            </path>
+            <!-- Purple diagonal rays -->
+            <path d="M{x} {y} l-10 10 M{x} {y} l10 -10"
+                  stroke="rgb(147, 51, 234)" stroke-width="4">
+                <animate attributeName="stroke-width" 
+                         values="4;8;4" 
+                         dur="0.5s" 
+                         repeatCount="2"/>
+            </path>
+            <text x="{x}" y="{y}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{idx}</text>
+        </g>
+        "#,
+        x = center_x, y = center_y, idx = idx + 1
+    );
+}
+
+fn rotate_position(row: usize, col: usize, size: usize) -> (usize, usize) {
+    (size - 1 - row, size - 1 - col)
+}
+
+fn check_player_collision(
+    player_pos: Option<(usize, usize)>,
+    opponent_pos: Option<(usize, usize)>,
+    opponent_move: &(usize, usize, CellContent),
+    opponent_board: &Board,
+) -> bool {
+    if let Some((player_i, player_j)) = player_pos {
+        // Check collision with opponent position
+        if let Some((opp_i, opp_j)) = opponent_pos {
+            if player_i == opp_i && player_j == opp_j {
+                return true;
+            }
+        }
+        
+        // Check collision with trap
+        let (op_i, op_j, ref op_content) = *opponent_move;
+        let (op_row, op_col) = rotate_position(op_i, op_j, opponent_board.grid.len());
+        if opponent_board.grid[op_row][op_col] == CellContent::Trap || 
+           matches!(op_content, CellContent::Trap) && op_row == player_i && op_col == player_j {
+            return true;
+        }
+    }
+    false
+}
+
+fn check_opponent_collision(
+    opponent_pos: Option<(usize, usize)>,
+    player_pos: Option<(usize, usize)>,
+    player_move: &(usize, usize, CellContent),
+    player_board: &Board,
+) -> bool {
+    if let Some((opp_i, opp_j)) = opponent_pos {
+        // Check collision with player position
+        if let Some((player_i, player_j)) = player_pos {
+            if opp_i == player_i && opp_j == player_j {
+                return true;
+            }
+        }
+        
+        // Check collision with trap
+        let (pl_i, pl_j, ref pl_content) = *player_move;
+        if player_board.grid[opp_i][opp_j] == CellContent::Trap || 
+           matches!(pl_content, CellContent::Trap) && pl_i == opp_i && pl_j == opp_j {
+            return true;
+        }
+    }
+    false
+}
+
+fn draw_player_piece(svg: &mut String, x: f32, y: f32, idx: usize) {
+    let _ = write!(
+        svg,
+        r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(37, 99, 235)"/>
+           <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+        x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
+    );
+}
+
+fn draw_opponent_piece(svg: &mut String, x: f32, y: f32, idx: usize) {
+    let _ = write!(
+        svg,
+        r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(147, 51, 234)"/>
+           <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+        x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
+    );
+}
+
+fn draw_player_trap(svg: &mut String, x: f32, y: f32) {
+    let _ = write!(
+        svg,
+        r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(37, 99, 235)" stroke-width="4"/>"#,
+        x + 5.0, y + 5.0
+    );
+}
+
+fn draw_opponent_trap(svg: &mut String, x: f32, y: f32) {
+    let _ = write!(
+        svg,
+        r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>"#,
+        x + 5.0, y + 5.0
+    );
+}
+
 pub fn generate_game_board(player_board: &Board, opponent_board: &Board) -> String {
     console::log_1(&"=== New Game Board Generation ===".into());
     console::log_1(&"Player Board sequence:".into());
@@ -152,78 +304,13 @@ pub fn generate_game_board(player_board: &Board, opponent_board: &Board) -> Stri
 
     console::log_1(&"\nCollision Processing:".into());
 
-    let mut svg = String::from(r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <rect width="100" height="100" fill="rgb(30, 41, 59)"/>
-            <g transform="translate(5,5)">"#);
-
-    // Draw grid
-    for i in 0..player_board.grid.len() {
-        for j in 0..player_board.grid[i].len() {
-            let x = j as f32 * 45.0;
-            let y = i as f32 * 45.0;
-            let _ = write!(
-                svg,
-                r#"<rect x="{}" y="{}" width="40" height="40" fill="rgb(51, 65, 85)"/>"#,
-                x, y
-            );
-        }
-    }
-
-    // Function to calculate opponent's rotated position
-    let rotate_position = |row: usize, col: usize, size: usize| -> (usize, usize) {
-        (size - 1 - row, size - 1 - col)
-    };
+    let mut svg = initialize_game_board_svg(player_board.grid.len());
 
     // Track current positions and collisions
     let mut player_current_pos = None;
     let mut opponent_current_pos = None;
     let mut player_collision = None;
     let mut opponent_collision = None;
-
-    // Function to draw collision starburst
-    let draw_collision_starburst = |svg: &mut String, x: f32, y: f32, idx: usize| {
-        let _ = write!(
-            svg,
-            r#"
-            <g>
-                <!-- Blue rays (player) -->
-                <path d="M{x} {y} l-15 0 M{x} {y} l15 0"
-                      stroke="rgb(37, 99, 235)" stroke-width="4">
-                    <animate attributeName="stroke-width" 
-                             values="4;8;4" 
-                             dur="0.5s" 
-                             repeatCount="2"/>
-                </path>
-                <!-- Purple rays (opponent) -->
-                <path d="M{x} {y} l0 -15 M{x} {y} l0 15"
-                      stroke="rgb(147, 51, 234)" stroke-width="4">
-                    <animate attributeName="stroke-width" 
-                             values="4;8;4" 
-                             dur="0.5s" 
-                             repeatCount="2"/>
-                </path>
-                <!-- Blue diagonal rays -->
-                <path d="M{x} {y} l-10 -10 M{x} {y} l10 10"
-                      stroke="rgb(37, 99, 235)" stroke-width="4">
-                    <animate attributeName="stroke-width" 
-                             values="4;8;4" 
-                             dur="0.5s" 
-                             repeatCount="2"/>
-                </path>
-                <!-- Purple diagonal rays -->
-                <path d="M{x} {y} l-10 10 M{x} {y} l10 -10"
-                      stroke="rgb(147, 51, 234)" stroke-width="4">
-                    <animate attributeName="stroke-width" 
-                             values="4;8;4" 
-                             dur="0.5s" 
-                             repeatCount="2"/>
-                </path>
-                <text x="{x}" y="{y}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{idx}</text>
-            </g>
-            "#,
-            x = x + 20.0, y = y + 20.0, idx = idx + 1
-        );
-    };
 
     // Process moves until collision
     for (idx, move_pair) in player_board.sequence.iter()
@@ -253,63 +340,31 @@ pub fn generate_game_board(player_board: &Board, opponent_board: &Board) -> Stri
                 _ => {}
             }
 
-            // Check for collision using current position
-            if let Some((player_i, player_j)) = player_current_pos {
-                // Check if current player position collides with opponent position
-                if let Some((opp_i, opp_j)) = opponent_current_pos {
-                    if player_i == opp_i && player_j == opp_j {
-                        player_collision = Some(idx);
-                        console::log_1(&format!("Player collision with opponent at step {}", idx + 1).into());
-                        
-                        let x = j as f32 * 45.0 + 20.0;
-                        let y = i as f32 * 45.0 + 20.0;
-                        draw_collision_starburst(&mut svg, x, y, idx);
-                        continue;
-                    }
-                }
+            if check_player_collision(player_current_pos, opponent_current_pos, opponent_move, opponent_board) {
+                player_collision = Some(idx);
+                console::log_1(&format!("Player collision at step {}", idx + 1).into());
                 
-                // Check if current player position hits a trap
-                let (op_i, op_j, ref op_content) = *opponent_move;
-                let (op_row, op_col) = rotate_position(op_i, op_j, opponent_board.grid.len());
-                if opponent_board.grid[op_row][op_col] == CellContent::Trap || 
-                   matches!(op_content, CellContent::Trap) && op_row == player_i && op_col == player_j {
-                    player_collision = Some(idx);
-                    console::log_1(&format!("Player collision with trap at step {}", idx + 1).into());
-                    continue;
-                }
+                let x = j as f32 * 45.0;
+                let y = i as f32 * 45.0;
+                draw_collision_starburst(&mut svg, x + 20.0, y + 20.0, idx);
+                continue;
             }
-            
+                
             // Draw the piece or trap if no collision or it's the collision point
             let x = j as f32 * 45.0;
             let y = i as f32 * 45.0;
             
             if player_collision == Some(idx) {
                 // Draw trap collision
-                let _ = write!(
-                    svg,
-                    r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>
-                       <circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(37, 99, 235)"/>
-                       <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                    x + 5.0, y + 5.0,
-                    x + 20.0, y + 20.0,
-                    x + 20.0, y + 20.0, idx + 1
-                );
+                draw_opponent_trap(&mut svg, x, y);
+                draw_player_piece(&mut svg, x, y, idx);
             } else if player_collision.is_none() {
                 match content {
                     CellContent::Player => {
-                        let _ = write!(
-                            svg,
-                            r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(37, 99, 235)"/>
-                               <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                            x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
-                        );
+                        draw_player_piece(&mut svg, x, y, idx);
                     },
                     CellContent::Trap => {
-                        let _ = write!(
-                            svg,
-                            r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(37, 99, 235)" stroke-width="4"/>"#,
-                            x + 5.0, y + 5.0
-                        );
+                        draw_player_trap(&mut svg, x, y);
                     },
                     _ => {}
                 }
@@ -329,29 +384,14 @@ pub fn generate_game_board(player_board: &Board, opponent_board: &Board) -> Stri
                 _ => {}
             }
 
-            // Check for collision using current position
-            if let Some((opp_i, opp_j)) = opponent_current_pos {
-                // Check if current opponent position collides with player position
-                if let Some((player_i, player_j)) = player_current_pos {
-                    if opp_i == player_i && opp_j == player_j {
-                        opponent_collision = Some(idx);
-                        console::log_1(&format!("Opponent collision with player at step {}", idx + 1).into());
-                        
-                        let x = rot_j as f32 * 45.0 + 20.0;
-                        let y = rot_i as f32 * 45.0 + 20.0;
-                        draw_collision_starburst(&mut svg, x, y, idx);
-                        continue;
-                    }
-                }
+            if check_opponent_collision(opponent_current_pos, player_current_pos, player_move, player_board) {
+                opponent_collision = Some(idx);
+                console::log_1(&format!("Opponent collision at step {}", idx + 1).into());
                 
-                // Check if current opponent position hits a trap
-                let (pl_i, pl_j, ref pl_content) = *player_move;
-                if player_board.grid[opp_i][opp_j] == CellContent::Trap || 
-                   matches!(pl_content, CellContent::Trap) && pl_i == i && pl_j == j {
-                    opponent_collision = Some(idx);
-                    console::log_1(&format!("Opponent collision with trap at step {}", idx + 1).into());
-                    continue;
-                }
+                let x = rot_j as f32 * 45.0;
+                let y = rot_i as f32 * 45.0;
+                draw_collision_starburst(&mut svg, x + 20.0, y + 20.0, idx);
+                continue;
             }
             
             // Draw the piece or trap if no collision or it's the collision point
@@ -360,31 +400,15 @@ pub fn generate_game_board(player_board: &Board, opponent_board: &Board) -> Stri
             
             if opponent_collision == Some(idx) {
                 // Draw trap collision
-                let _ = write!(
-                    svg,
-                    r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(37, 99, 235)" stroke-width="4"/>
-                       <circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(147, 51, 234)"/>
-                       <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                    x + 5.0, y + 5.0,
-                    x + 20.0, y + 20.0,
-                    x + 20.0, y + 20.0, idx + 1
-                );
+                draw_player_trap(&mut svg, x, y);
+                draw_opponent_piece(&mut svg, x, y, idx);
             } else if opponent_collision.is_none() {
                 match content {
                     CellContent::Player => {
-                        let _ = write!(
-                            svg,
-                            r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(147, 51, 234)"/>
-                               <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                            x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
-                        );
+                        draw_opponent_piece(&mut svg, x, y, idx);
                     },
                     CellContent::Trap => {
-                        let _ = write!(
-                            svg,
-                            r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>"#,
-                            x + 5.0, y + 5.0
-                        );
+                        draw_opponent_trap(&mut svg, x, y);
                     },
                     _ => {}
                 }
