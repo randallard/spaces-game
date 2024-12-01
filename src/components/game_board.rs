@@ -219,7 +219,10 @@ impl GameBoard {
                 match content {
                     CellContent::Player => {
                         if let Some((old_row, _)) = opponent_pos {
-                            self.opponent_score += self.calculate_step_score(old_row, rot_row);
+                            let score_change = self.calculate_step_score(old_row, rot_row);
+                            self.opponent_score += score_change;
+                            console::log_1(&format!("Opponent score change: +{} (moved from row {} to {})", 
+                                score_change, old_row, rot_row).into());
                         }
                         opponent_pos = Some((rot_row, rot_col));
                     },
@@ -266,5 +269,9 @@ impl GameBoard {
                 }
             }
         }
+
+        console::log_1(&format!("Final scores - Player: {}, Opponent: {}", 
+        self.player_score, self.opponent_score).into());
+
     }
 }
