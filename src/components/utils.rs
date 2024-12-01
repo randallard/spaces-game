@@ -158,39 +158,37 @@ fn initialize_game_board_svg(board_size: usize) -> String {
 
     svg
 }
+// Only show the opposite color's rays
+fn draw_collision_starburst(svg: &mut String, center_x: f32, center_y: f32, idx: usize, use_player_color: bool) {
+    let color = if use_player_color {
+        "rgb(37, 99, 235)"  // Blue (player color)
+    } else {
+        "rgb(147, 51, 234)"  // Purple (opponent color)
+    };
 
-fn draw_collision_starburst(svg: &mut String, center_x: f32, center_y: f32, idx: usize) {
     let _ = write!(
         svg,
         r#"
         <g>
-            <!-- Blue rays (player) -->
+            <!-- Horizontal rays -->
             <path d="M{x} {y} l-15 0 M{x} {y} l15 0"
-                  stroke="rgb(37, 99, 235)" stroke-width="4">
+                  stroke="{color}" stroke-width="4">
                 <animate attributeName="stroke-width" 
                          values="4;8;4" 
                          dur="0.5s" 
                          repeatCount="2"/>
             </path>
-            <!-- Purple rays (opponent) -->
+            <!-- Vertical rays -->
             <path d="M{x} {y} l0 -15 M{x} {y} l0 15"
-                  stroke="rgb(147, 51, 234)" stroke-width="4">
+                  stroke="{color}" stroke-width="4">
                 <animate attributeName="stroke-width" 
                          values="4;8;4" 
                          dur="0.5s" 
                          repeatCount="2"/>
             </path>
-            <!-- Blue diagonal rays -->
-            <path d="M{x} {y} l-10 -10 M{x} {y} l10 10"
-                  stroke="rgb(37, 99, 235)" stroke-width="4">
-                <animate attributeName="stroke-width" 
-                         values="4;8;4" 
-                         dur="0.5s" 
-                         repeatCount="2"/>
-            </path>
-            <!-- Purple diagonal rays -->
-            <path d="M{x} {y} l-10 10 M{x} {y} l10 -10"
-                  stroke="rgb(147, 51, 234)" stroke-width="4">
+            <!-- Diagonal rays -->
+            <path d="M{x} {y} l-10 -10 M{x} {y} l10 10 M{x} {y} l-10 10 M{x} {y} l10 -10"
+                  stroke="{color}" stroke-width="4">
                 <animate attributeName="stroke-width" 
                          values="4;8;4" 
                          dur="0.5s" 
@@ -199,7 +197,10 @@ fn draw_collision_starburst(svg: &mut String, center_x: f32, center_y: f32, idx:
             <text x="{x}" y="{y}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{idx}</text>
         </g>
         "#,
-        x = center_x, y = center_y, idx = idx + 1
+        x = center_x, 
+        y = center_y, 
+        idx = idx + 1,
+        color = color
     );
 }
 
@@ -346,7 +347,7 @@ pub fn generate_game_board(player_board: &Board, opponent_board: &Board) -> Stri
                 
                 let x = j as f32 * 45.0;
                 let y = i as f32 * 45.0;
-                draw_collision_starburst(&mut svg, x + 20.0, y + 20.0, idx);
+                draw_collision_starburst(&mut svg, x + 20.0, y + 20.0, idx, true);
                 continue;
             }
                 
@@ -390,7 +391,7 @@ pub fn generate_game_board(player_board: &Board, opponent_board: &Board) -> Stri
                 
                 let x = rot_j as f32 * 45.0;
                 let y = rot_i as f32 * 45.0;
-                draw_collision_starburst(&mut svg, x + 20.0, y + 20.0, idx);
+                draw_collision_starburst(&mut svg, x + 20.0, y + 20.0, idx, false);
                 continue;
             }
             
