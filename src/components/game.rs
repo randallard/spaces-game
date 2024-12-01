@@ -1,16 +1,22 @@
 use leptos::*;
 use leptos::prelude::*;
 use leptos::callback::Callback;
+use crate::components::opponent::OpponentType;
+
 use super::board::SavedBoard;
 use super::opponent::Opponent;
 use serde::{Serialize, Deserialize};
 use std::time::Duration;
 use super::utils::load_saved_boards;
+use rand; 
+use rand::seq::SliceRandom; 
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub enum GamePhase {
     SelectingBoards,
+    DisplayingBoards,  // Add this
     ShowingResults,
+    RoundComplete,     // Add this
 }
 
 // Add this near the top with other enums
@@ -31,11 +37,13 @@ pub struct GameState {
     pub player2_score: i32,
     pub player1_board: Option<SavedBoard>,
     pub player2_board: Option<SavedBoard>,
+    pub current_turn: usize,  
+    pub player1_round_score: i32,  
+    pub player2_round_score: i32,  
     pub phase: GamePhase,
-    pub speed: GameSpeed,  // Add this line
+    pub speed: GameSpeed, 
 }
 
-// Update the new() function
 impl GameState {
     pub fn new(player_name: String, opponent: Opponent) -> Self {
         GameState {
@@ -46,10 +54,19 @@ impl GameState {
             player2_score: 0,
             player1_board: None,
             player2_board: None,
+            current_turn: 0,
+            player1_round_score: 0,
+            player2_round_score: 0,
             phase: GamePhase::SelectingBoards,
-            speed: GameSpeed::Quick,  // Default to Quick
+            speed: GameSpeed::Relaxed,  // Default to Quick
         }
     }
+}
+
+fn select_random_board(boards: Vec<SavedBoard>) -> Option<SavedBoard> {
+    use rand::seq::SliceRandom;
+    let mut rng = rand::thread_rng();
+    boards.choose(&mut rng).cloned()
 }
 
 #[component]
@@ -139,6 +156,17 @@ pub fn Game(
                                                 on:click=move |_| {
                                                     let mut current_state = game_state.get();
                                                     current_state.player1_board = Some(board.clone());
+                                                    
+                                                    // Select random board for CPU opponent
+                                                    if let Some(ref opponent) = current_state.player2 {
+                                                        if matches!(opponent.opponent_type, OpponentType::Computer) {
+                                                            let available_boards = boards.get();
+                                                            if let Some(cpu_board) = select_random_board(available_boards) {
+                                                                current_state.player2_board = Some(cpu_board);
+                                                            }
+                                                        }
+                                                    }
+                                                    
                                                     current_state.phase = GamePhase::ShowingResults;
                                                     game_state.set(current_state);
                                                 }
@@ -156,8 +184,65 @@ pub fn Game(
                         </div>
                     }.into_any(),
                     GamePhase::ShowingResults => view! {
-                        <div>"Results will go here"</div>
+                        <div class="flex flex-col items-center gap-6">
+                            <div class="flex gap-8">
+                                <div class="text-center">
+                                    <h3 class="text-xl font-bold mb-2">{move || game_state.get().player1}</h3>
+                                    {move || game_state.get().player1_board.as_ref().map(|board| view! {
+                                        <img 
+                                            src=board.thumbnail.clone()
+                                            alt="Player 1 board" 
+                                            class="w-48 h-48 rounded border border-slate-700"
+                                        />
+                                    })}
+                                    <div class="mt-2 text-lg">
+                                        "Score: " <span class="font-bold">{move || game_state.get().player1_round_score}</span>
+                                    </div>
+                                </div>
+                                <div class="text-center">
+                                    <h3 class="text-xl font-bold mb-2">
+                                        {move || game_state.get().player2.as_ref().map(|p| p.name.clone()).unwrap_or_default()}
+                                    </h3>
+                                    {move || game_state.get().player2_board.as_ref().map(|board| view! {
+                                        <img 
+                                            src=board.thumbnail.clone()
+                                            alt="Player 2 board" 
+                                            class="w-48 h-48 rounded border border-slate-700"
+                                        />
+                                    })}
+                                    <div class="mt-2 text-lg">
+                                        "Score: " <span class="font-bold">{move || game_state.get().player2_round_score}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
+                                on:click=move |_| {
+                                    let mut current_state = game_state.get();
+                                    current_state.current_round += 1;
+                                    if current_state.current_round <= 8 {
+                                        current_state.phase = GamePhase::SelectingBoards;
+                                        current_state.player1_board = None;
+                                        current_state.player2_board = None;
+                                        set_timer.set(match current_state.speed {
+                                            GameSpeed::Lightning => 1,
+                                            GameSpeed::Quick => 5,
+                                            GameSpeed::Relaxed => 10,
+                                            GameSpeed::Chill => 999999,
+                                        });
+                                    }
+                                    game_state.set(current_state);
+                                }
+                            >
+                                {move || if game_state.get().current_round <= 8 {
+                                    "Next Round"
+                                } else {
+                                    "Game Complete"
+                                }}
+                            </button>
+                        </div>
                     }.into_any(),
+                    GamePhase::DisplayingBoards | GamePhase::RoundComplete => todo!(),
                 }}
             </div>
         </div>
