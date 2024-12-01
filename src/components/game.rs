@@ -56,11 +56,21 @@ impl GameState {
 pub fn Game(
     #[prop(into)] player_name: String,
     #[prop(into)] opponent: Opponent,
+    #[prop(into)] speed: GameSpeed,  
     #[prop(into)] on_exit: Callback<()>,
 ) -> impl IntoView {
-    let game_state = RwSignal::new(GameState::new(player_name, opponent));
+    let game_state = RwSignal::new({
+        let mut state = GameState::new(player_name, opponent);
+        state.speed = speed;  // Set the speed from prop
+        state
+    });
     let boards = Memo::new(|_| load_saved_boards().unwrap_or_default());
-    let (timer, set_timer) = signal(5);
+    let (timer, set_timer) = signal(match game_state.get().speed {
+        GameSpeed::Lightning => 1,
+        GameSpeed::Quick => 5,
+        GameSpeed::Relaxed => 10,
+        GameSpeed::Chill => 999999, // Effectively no limit
+    });
 
     // Update timer every second
     if timer.get() > 0 {
@@ -108,9 +118,15 @@ pub fn Game(
                                 <h3 class="text-xl font-bold mb-2">
                                     "Select your board"
                                 </h3>
-                                <div class="font-mono text-lg text-orange-400 bg-slate-700 px-4 py-1 rounded-md">
-                                    {move || format!("{} seconds left!", timer.get())}
-                                </div>
+                                {move || {
+                                    let current_speed = game_state.get().speed;
+                                    let current_time = timer.get();
+                                    (current_speed != GameSpeed::Chill).then(|| view! {
+                                        <div class="font-mono text-lg text-orange-400 bg-slate-700 px-4 py-1 rounded-md">
+                                            {move || format!("{} seconds left!", current_time)}
+                                        </div>
+                                    })
+                                }}
                             </div>
                             <div class="grid grid-cols-4 gap-4 max-w-xl mx-auto">
                                 <For

@@ -48,7 +48,7 @@ fn App() -> impl IntoView {
     let (show_form, set_show_form) = signal(true);
     let (show_profile, set_show_profile) = signal(false);
     let (default_game_speed, set_default_game_speed) = signal(GameSpeed::Quick);
-    let (show_game, set_show_game) = signal(None::<Opponent>);
+    let (show_game, set_show_game) = signal(None::<(Opponent, GameSpeed)>);
     let (show_board_creator, set_show_board_creator) = signal(false);
     let opponent_to_delete = RwSignal::new(None::<Opponent>);
     let opponents_trigger = RwSignal::new(false);
@@ -150,6 +150,7 @@ fn App() -> impl IntoView {
                                                     view! {
                                                         <button
                                                             class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded-t text-sm"
+                                                            on:click=move |_| set_show_game.set(Some((opponent.clone(), default_game_speed.get())))
                                                         >
                                                             "Play\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}▾"
                                                         </button>
@@ -157,9 +158,7 @@ fn App() -> impl IntoView {
                                                             <button
                                                                 class="block w-full text-left px-3 py-1 hover:bg-green-700 text-sm border-t border-green-700"
                                                                 on:click=move |_| {
-                                                                    let mut game_state = GameState::new(name.get(), opponent_lightning.clone());
-                                                                    game_state.speed = GameSpeed::Lightning;
-                                                                    set_show_game.set(Some(opponent_lightning.clone()));
+                                                                    set_show_game.set(Some((opponent_lightning.clone(), GameSpeed::Lightning)));
                                                                 }
                                                             >
                                                                 "Lightning!\u{00A0}(1s\u{00A0}to\u{00A0}choose)"
@@ -167,9 +166,7 @@ fn App() -> impl IntoView {
                                                             <button
                                                                 class="block w-full text-left px-3 py-1 hover:bg-green-700 text-sm border-t border-green-700"
                                                                 on:click=move |_| {
-                                                                    let mut game_state = GameState::new(name.get(), opponent_quick.clone());
-                                                                    game_state.speed = GameSpeed::Quick;
-                                                                    set_show_game.set(Some(opponent_quick.clone()));
+                                                                    set_show_game.set(Some((opponent_quick.clone(), GameSpeed::Quick)));
                                                                 }
                                                             >
                                                                 "Quick!\u{00A0}(5s\u{00A0}to\u{00A0}choose)"
@@ -177,9 +174,7 @@ fn App() -> impl IntoView {
                                                             <button
                                                                 class="block w-full text-left px-3 py-1 hover:bg-green-700 text-sm border-t border-green-700"
                                                                 on:click=move |_| {
-                                                                    let mut game_state = GameState::new(name.get(), opponent_relaxed.clone());
-                                                                    game_state.speed = GameSpeed::Relaxed;
-                                                                    set_show_game.set(Some(opponent_relaxed.clone()));
+                                                                    set_show_game.set(Some((opponent_relaxed.clone(),GameSpeed::Relaxed)));
                                                                 }
                                                             >
                                                                 "Relaxed\u{00A0}(10s\u{00A0}to\u{00A0}choose)"
@@ -187,9 +182,7 @@ fn App() -> impl IntoView {
                                                             <button
                                                                 class="block w-full text-left px-3 py-1 hover:bg-green-700 text-sm border-t border-green-700"
                                                                 on:click=move |_| {
-                                                                    let mut game_state = GameState::new(name.get(), opponent_chill.clone());
-                                                                    game_state.speed = GameSpeed::Chill;
-                                                                    set_show_game.set(Some(opponent_chill.clone()));
+                                                                    set_show_game.set(Some((opponent_chill.clone(),GameSpeed::Chill)));
                                                                 }
                                                             >
                                                                 "Totally\u{00A0}Chill\u{00A0}(no\u{00A0}limit)"
@@ -268,10 +261,11 @@ fn App() -> impl IntoView {
                 </div>
             })}
         </div>
-        {move || show_game.get().map(|opponent| view! {
+        {move || show_game.get().map(|(opponent, speed)| view! {  // Change this line to destructure both values
             <Game
                 player_name=name.get()
                 opponent=opponent
+                speed=speed  // Add this line
                 on_exit=move || set_show_game.set(None)
             />
         })}
