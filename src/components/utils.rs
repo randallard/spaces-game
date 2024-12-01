@@ -33,15 +33,15 @@ pub fn generate_opponent_thumbnail(board: &Board) -> String {
             CellContent::Player => {
                 let _ = write!(
                     svg,
-                    r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(220, 38, 38)"/>
-                       <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                    r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(147, 51, 234)"/>
+                    <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
                     x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
                 );
             },
             CellContent::Trap => {
                 let _ = write!(
                     svg,
-                    r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4"/>"#,
+                    r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>"#,
                     x + 5.0, y + 5.0
                 );
             },
@@ -213,21 +213,23 @@ pub fn generate_game_board(player_board: &Board, opponent_board: &Board) -> Stri
         // Process opponent move if no collision yet
         if opponent_collision.is_none() {
             let (i, j, ref content) = *opponent_move;
-            let x = j as f32 * 45.0;
-            let y = i as f32 * 45.0;
-
+            // Rotate the opponent's position
+            let (rot_i, rot_j) = rotate_position(i, j, opponent_board.grid.len());
+            let x = rot_j as f32 * 45.0;
+            let y = rot_i as f32 * 45.0;
+        
             // Check for collision with player's trap
             let (pl_row, pl_col, _) = *player_move;            
             let (pl_row, pl_col) = rotate_position(pl_row, pl_col, opponent_board.grid.len());
             if player_board.grid[pl_row][pl_col] == CellContent::Trap {
                 opponent_collision = Some(idx);
             }
-
+        
             match content {
                 CellContent::Player => {
                     let _ = write!(
                         svg,
-                        r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(220, 38, 38)"/>
+                        r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(147, 51, 234)"/>
                            <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
                         x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
                     );
@@ -235,7 +237,7 @@ pub fn generate_game_board(player_board: &Board, opponent_board: &Board) -> Stri
                 CellContent::Trap => {
                     let _ = write!(
                         svg,
-                        r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4"/>"#,
+                        r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>"#,
                         x + 5.0, y + 5.0
                     );
                 },

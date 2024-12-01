@@ -192,7 +192,6 @@ pub fn Game(
                                 <div class="text-center">
                                     <h3 class="text-sm font-bold mb-2">
                                         <div class="flex items-center justify-center gap-2">
-                                            <div class="w-3 h-3 rounded-full bg-blue-600"></div>
                                             {move || game_state.get().player1}
                                         </div>
                                     </h3>
@@ -209,7 +208,6 @@ pub fn Game(
                                 <div class="text-center">
                                     <h3 class="text-sm font-bold mb-2">
                                         <div class="flex items-center justify-center gap-2">
-                                            <div class="w-3 h-3 rounded-full bg-red-600"></div>
                                             {move || game_state.get().player2.as_ref().map(|p| p.name.clone()).unwrap_or_default()}
                                         </div>
                                     </h3>
