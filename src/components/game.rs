@@ -2,6 +2,7 @@ use leptos::*;
 use leptos::prelude::*;
 use leptos::callback::Callback;
 use crate::components::opponent::OpponentType;
+use crate::components::utils::{generate_game_board, generate_thumbnail, generate_opponent_thumbnail};
 
 use super::board::SavedBoard;
 use super::opponent::Opponent;
@@ -185,34 +186,70 @@ pub fn Game(
                     }.into_any(),
                     GamePhase::ShowingResults => view! {
                         <div class="flex flex-col items-center gap-6">
-                            <div class="flex gap-8">
+                            // Thumbnails row
+                            <div class="flex gap-8 items-start">
+                                // Player's board
                                 <div class="text-center">
-                                    <h3 class="text-xl font-bold mb-2">{move || game_state.get().player1}</h3>
+                                    <h3 class="text-sm font-bold mb-2">
+                                        <div class="flex items-center justify-center gap-2">
+                                            <div class="w-3 h-3 rounded-full bg-blue-600"></div>
+                                            {move || game_state.get().player1}
+                                        </div>
+                                    </h3>
                                     {move || game_state.get().player1_board.as_ref().map(|board| view! {
                                         <img 
-                                            src=board.thumbnail.clone()
-                                            alt="Player 1 board" 
-                                            class="w-48 h-48 rounded border border-slate-700"
+                                            src=generate_thumbnail(&board.board)
+                                            alt="Player board" 
+                                            class="w-32 h-32 rounded border border-slate-700"
                                         />
                                     })}
-                                    <div class="mt-2 text-lg">
-                                        "Score: " <span class="font-bold">{move || game_state.get().player1_round_score}</span>
-                                    </div>
                                 </div>
+                    
+                                // Opponent's board
                                 <div class="text-center">
-                                    <h3 class="text-xl font-bold mb-2">
-                                        {move || game_state.get().player2.as_ref().map(|p| p.name.clone()).unwrap_or_default()}
+                                    <h3 class="text-sm font-bold mb-2">
+                                        <div class="flex items-center justify-center gap-2">
+                                            <div class="w-3 h-3 rounded-full bg-red-600"></div>
+                                            {move || game_state.get().player2.as_ref().map(|p| p.name.clone()).unwrap_or_default()}
+                                        </div>
                                     </h3>
                                     {move || game_state.get().player2_board.as_ref().map(|board| view! {
                                         <img 
-                                            src=board.thumbnail.clone()
-                                            alt="Player 2 board" 
-                                            class="w-48 h-48 rounded border border-slate-700"
+                                            src=generate_opponent_thumbnail(&board.board)
+                                            alt="Opponent board" 
+                                            class="w-32 h-32 rounded border border-slate-700"
                                         />
                                     })}
-                                    <div class="mt-2 text-lg">
-                                        "Score: " <span class="font-bold">{move || game_state.get().player2_round_score}</span>
-                                    </div>
+                                </div>
+                            </div>
+                    
+                            // Combined view row
+                            <div class="text-center">
+                                <h3 class="text-xl font-bold mb-2">"Game Progress"</h3>
+                                {move || {
+                                    let state = game_state.get();
+                                    if let (Some(board1), Some(board2)) = (&state.player1_board, &state.player2_board) {
+                                        view! {
+                                            <img 
+                                                src=generate_game_board(&board1.board, &board2.board)
+                                                alt="Game board" 
+                                                class="w-96 h-96 rounded border border-slate-700"
+                                            />
+                                        }.into_any()
+                                    } else {
+                                        view! { <div>"Loading..."</div> }.into_any()
+                                    }
+                                }}
+                            </div>
+                    
+                            <div class="mt-4 flex justify-center gap-8">
+                                <div class="text-lg">
+                                    {move || game_state.get().player1} ": "
+                                    <span class="font-bold">{move || game_state.get().player1_round_score}</span>
+                                </div>
+                                <div class="text-lg">
+                                    {move || game_state.get().player2.as_ref().map(|p| p.name.clone()).unwrap_or_default()} ": "
+                                    <span class="font-bold">{move || game_state.get().player2_round_score}</span>
                                 </div>
                             </div>
                             <button
