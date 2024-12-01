@@ -7,7 +7,7 @@ use serde::{Serialize, Deserialize};
 use crate::components::utils::{generate_thumbnail, save_board};
 use crate::components::saved_boards::get_board_trigger;
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CellContent {
     Empty,
     Player,
