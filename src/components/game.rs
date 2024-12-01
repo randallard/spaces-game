@@ -6,6 +6,7 @@ use crate::components::utils::{generate_game_board, generate_thumbnail, generate
 
 use super::board::SavedBoard;
 use super::opponent::Opponent;
+use super::game_board::GameBoard;
 use serde::{Serialize, Deserialize};
 use std::time::Duration;
 use super::utils::load_saved_boards;
@@ -38,11 +39,9 @@ pub struct GameState {
     pub player2_score: i32,
     pub player1_board: Option<SavedBoard>,
     pub player2_board: Option<SavedBoard>,
-    pub current_turn: usize,  
-    pub player1_round_score: i32,  
-    pub player2_round_score: i32,  
+    pub game_board: Option<GameBoard>,  // Add this
     pub phase: GamePhase,
-    pub speed: GameSpeed, 
+    pub speed: GameSpeed,
 }
 
 impl GameState {
@@ -55,11 +54,9 @@ impl GameState {
             player2_score: 0,
             player1_board: None,
             player2_board: None,
-            current_turn: 0,
-            player1_round_score: 0,
-            player2_round_score: 0,
+            game_board: None,  // Add this
             phase: GamePhase::SelectingBoards,
-            speed: GameSpeed::Relaxed,  // Default to Quick
+            speed: GameSpeed::Relaxed,
         }
     }
 }
@@ -203,7 +200,7 @@ pub fn Game(
                                         />
                                     })}
                                 </div>
-                    
+                
                                 // Opponent's board
                                 <div class="text-center">
                                     <h3 class="text-sm font-bold mb-2">
@@ -220,36 +217,92 @@ pub fn Game(
                                     })}
                                 </div>
                             </div>
-                    
-                            // Combined view row
+                
+                            // Game board view
                             <div class="text-center">
                                 <h3 class="text-xl font-bold mb-2">"Game Progress"</h3>
                                 {move || {
                                     let state = game_state.get();
                                     if let (Some(board1), Some(board2)) = (&state.player1_board, &state.player2_board) {
-                                        view! {
-                                            <img 
-                                                src=generate_game_board(&board1.board, &board2.board)
-                                                alt="Game board" 
-                                                class="w-96 h-96 rounded border border-slate-700"
-                                            />
-                                        }.into_any()
+                                        // Initialize game board if not exists
+                                        if state.game_board.is_none() {
+                                            let mut game_board = GameBoard::new(2);
+                                            game_board.process_turn(&board1.board, &board2.board);
+                                            
+                                            // Update total scores
+                                            let mut current_state = state.clone();
+                                            current_state.player1_score += game_board.player_score;
+                                            current_state.player2_score += game_board.opponent_score;
+                                            current_state.game_board = Some(game_board);
+                                            game_state.set(current_state);
+                                        }
+                
+                                        if let Some(game_board) = &state.game_board {
+                                            view! {
+                                                <img 
+                                                    src=game_board.generate_board_svg(&board1.board, &board2.board)
+                                                    alt="Game board" 
+                                                    class="w-96 h-96 rounded border border-slate-700"
+                                                />
+                                            }.into_any()
+                                        } else {
+                                            view! { <div>"Loading..."</div> }.into_any()
+                                        }
                                     } else {
                                         view! { <div>"Loading..."</div> }.into_any()
                                     }
                                 }}
                             </div>
-                    
+                
+                            // Round scores display
                             <div class="mt-4 flex justify-center gap-8">
-                                <div class="text-lg">
-                                    {move || game_state.get().player1} ": "
-                                    <span class="font-bold">{move || game_state.get().player1_round_score}</span>
-                                </div>
-                                <div class="text-lg">
-                                    {move || game_state.get().player2.as_ref().map(|p| p.name.clone()).unwrap_or_default()} ": "
-                                    <span class="font-bold">{move || game_state.get().player2_round_score}</span>
-                                </div>
+                                {move || {
+                                    let state = game_state.get();
+                                    if let Some(game_board) = &state.game_board {
+                                        view! {
+                                            <div class="flex justify-center gap-8">
+                                                <div class="text-lg">
+                                                    {state.player1.clone()} 
+                                                    {" (Round): "}
+                                                    <span class="font-bold">
+                                                        {game_board.player_score}
+                                                    </span>
+                                                </div>
+                                                <div class="text-lg">
+                                                    {state.player2.as_ref().map(|p| p.name.clone()).unwrap_or_default()} 
+                                                    {" (Round): "}
+                                                    <span class="font-bold">
+                                                        {game_board.opponent_score}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        }.into_any()
+                                    } else {
+                                        view! { <div>"Calculating scores..."</div> }.into_any()
+                                    }
+                                }}
                             </div>
+                
+                            // Total scores display
+                            <div class="mt-2 flex justify-center gap-8 text-sm text-gray-400">
+                                {move || {
+                                    let state = game_state.get();
+                                    view! {
+                                        <>
+                                            <div>
+                                                "Total: "
+                                                <span class="font-bold">{state.player1_score}</span>
+                                            </div>
+                                            <div>
+                                                "Total: "
+                                                <span class="font-bold">{state.player2_score}</span>
+                                            </div>
+                                        </>
+                                    }
+                                }}
+                            </div>
+                
+                            // Next round button
                             <button
                                 class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
                                 on:click=move |_| {
@@ -259,6 +312,7 @@ pub fn Game(
                                         current_state.phase = GamePhase::SelectingBoards;
                                         current_state.player1_board = None;
                                         current_state.player2_board = None;
+                                        current_state.game_board = None;
                                         set_timer.set(match current_state.speed {
                                             GameSpeed::Lightning => 1,
                                             GameSpeed::Quick => 5,
