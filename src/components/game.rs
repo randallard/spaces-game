@@ -236,14 +236,29 @@ pub fn Game(
                                             current_state.game_board = Some(game_board);
                                             game_state.set(current_state);
                                         }
-                
                                         if let Some(game_board) = &state.game_board {
                                             view! {
-                                                <img 
-                                                    src=game_board.generate_board_svg(&board1.board, &board2.board)
-                                                    alt="Game board" 
-                                                    class="w-96 h-96 rounded border border-slate-700"
-                                                />
+                                                <div class="flex flex-col items-center gap-2">
+                                                    // Add player success message
+                                                    {(game_board.player_position.map_or(false, |(row, _)| row == 0)).then(|| view! {
+                                                        <div class="text-green-400 font-bold text-lg">
+                                                            {state.player1.clone()} " Made it!"
+                                                        </div>
+                                                    })}
+                                                    
+                                                    <img 
+                                                        src=game_board.generate_board_svg(&board1.board, &board2.board)
+                                                        alt="Game board" 
+                                                        class="w-96 h-96 rounded border border-slate-700"
+                                                    />
+                                                    
+                                                    // Add opponent success message
+                                                    {(game_board.opponent_position.map_or(false, |(row, _)| row == game_board.size - 1)).then(|| view! {
+                                                        <div class="text-purple-400 font-bold text-lg">
+                                                            {state.player2.as_ref().map(|p| p.name.clone()).unwrap_or_default()} " Made it!"
+                                                        </div>
+                                                    })}
+                                                </div>
                                             }.into_any()
                                         } else {
                                             view! { <div>"Loading..."</div> }.into_any()
@@ -252,8 +267,7 @@ pub fn Game(
                                         view! { <div>"Loading..."</div> }.into_any()
                                     }
                                 }}
-                            </div>
-                
+                            </div>                
                             // Round scores display
                             <div class="mt-4 flex justify-center gap-8">
                                 {move || {
