@@ -29,6 +29,11 @@ pub fn generate_opponent_thumbnail(board: &Board) -> String {
         let x = rot_j as f32 * 45.0;
         let y = rot_i as f32 * 45.0;
 
+        // Skip the final move (when piece reaches bottom row in rotated view)
+        if rot_i == size - 1 && idx == board.sequence.len() - 1 {
+            continue;
+        }
+
         match content {
             CellContent::Player => {
                 let _ = write!(

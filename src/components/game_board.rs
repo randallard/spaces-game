@@ -287,7 +287,7 @@ impl GameBoard {
         let mut svg = String::from(r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
                 <rect width="100" height="100" fill="rgb(30, 41, 59)"/>
                 <g transform="translate(5,5)">"#);
-
+    
         // Draw grid
         for i in 0..self.size {
             for j in 0..self.size {
@@ -300,12 +300,17 @@ impl GameBoard {
                 );
             }
         }
-
-        // Draw pieces and traps for both players
+    
+        // Draw pieces and traps for player's board
         for (idx, &(i, j, ref content)) in player_board.sequence.iter().enumerate() {
             if self.player_collision_step.map_or(true, |collision| idx <= collision) {
                 let x = j as f32 * 45.0;
                 let y = i as f32 * 45.0;
+                
+                // Skip the final move visualization if at top row
+                if i == 0 && idx == player_board.sequence.len() - 1 {
+                    continue;
+                }
                 
                 match content {
                     CellContent::Player => {
@@ -330,7 +335,7 @@ impl GameBoard {
                     CellContent::Trap => {
                         let _ = write!(
                             svg,
-                            r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4"/>"#,  // Changed to red
+                            r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4"/>"#,
                             x + 5.0, y + 5.0
                         );
                     },
@@ -338,13 +343,18 @@ impl GameBoard {
                 }
             }
         }
-
+    
         // Draw opponent moves (rotated)
         for (idx, &(i, j, ref content)) in opponent_board.sequence.iter().enumerate() {
             if self.opponent_collision_step.map_or(true, |collision| idx <= collision) {
                 let (rot_i, rot_j) = self.rotate_position(i, j);
                 let x = rot_j as f32 * 45.0;
                 let y = rot_i as f32 * 45.0;
+                
+                // Skip the final move visualization if at bottom row (rotated)
+                if rot_i == self.size - 1 && idx == opponent_board.sequence.len() - 1 {
+                    continue;
+                }
                 
                 match content {
                     CellContent::Player => {
@@ -369,7 +379,7 @@ impl GameBoard {
                     CellContent::Trap => {
                         let _ = write!(
                             svg,
-                            r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>"#,  // Orange color
+                            r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>"#,
                             x + 5.0, y + 5.0
                         );
                     },
@@ -377,11 +387,11 @@ impl GameBoard {
                 }
             }
         }
-
+    
         svg.push_str("</g></svg>");
         format!(r#"data:image/svg+xml,{}"#, urlencoding::encode(&svg))
     }
-
+    
     fn rotate_position(&self, row: usize, col: usize) -> (usize, usize) {
         (self.size - 1 - row, self.size - 1 - col)
     }
