@@ -257,144 +257,149 @@ impl GameBoard {
     pub fn process_turn(&mut self, player_board: &Board, opponent_board: &Board) {
 
         let mut player_pos = None;
-    let mut opponent_pos = None;
-    let mut player_goal_step = None;
-    let mut opponent_goal_step = None;
+        let mut opponent_pos = None;
+        let mut player_goal_step = None;
+        let mut opponent_goal_step = None;
 
-    console::log_1(&"=== Starting New Round ===".into());
-    console::log_1(&format!("Player sequence length: {}", player_board.sequence.len()).into());
-    console::log_1(&format!("Opponent sequence length: {}", opponent_board.sequence.len()).into());
+        console::log_1(&"=== Starting New Round ===".into());
+        console::log_1(&format!("Player sequence length: {}", player_board.sequence.len()).into());
+        console::log_1(&format!("Opponent sequence length: {}", opponent_board.sequence.len()).into());
 
-    for step in 0..player_board.sequence.len().max(opponent_board.sequence.len()) {
-        console::log_1(&format!("\n----- STEP {} -----", step + 1).into());
+        for step in 0..player_board.sequence.len().max(opponent_board.sequence.len()) {
+            console::log_1(&format!("\n----- STEP {} -----", step + 1).into());
 
-        let mut temp_player_pos = player_pos;
-        let mut temp_opponent_pos = opponent_pos;
+            let mut temp_player_pos = player_pos;
+            let mut temp_opponent_pos = opponent_pos;
 
-        // Process player move if available
-        if step < player_board.sequence.len() {
-            let (row, col, content) = player_board.sequence[step].clone();
-            console::log_1(&format!("Player: Processing row {} col {} ({:?})", row, col, content).into());
-            
-            match content {
-                CellContent::Player => {
-                    if self.player_collision_step.map_or(true, |collision| step <= collision) {
-                        temp_player_pos = Some((row, col));
-                        console::log_1(&format!("Player position updated to ({}, {})", row, col).into());
-                        
-                        if row == 0 && player_goal_step.is_none() {
-                            player_goal_step = Some(step);
-                            console::log_1(&"GOAL: Player reached row 0!".into());
+            // Process player move if available            
+            if step < player_board.sequence.len() {
+                let (row, col, content) = player_board.sequence[step].clone();
+                console::log_1(&format!("Player: Processing row {} col {} ({:?})", row, col, content).into());
+                
+                match content {
+                    CellContent::Player => {
+                        if self.player_collision_step.map_or(true, |collision| step <= collision) {
+                            temp_player_pos = Some((row, col));
+                            console::log_1(&format!("Player position updated to ({}, {})", row, col).into());
+                            
+                            // Only record goal if this isn't also a collision step
+                            if row == 0 && player_goal_step.is_none() && 
+                            !self.check_piece_collision(Some((row, col)), temp_opponent_pos) {
+                                player_goal_step = Some(step);
+                                console::log_1(&"GOAL: Player reached row 0!".into());
+                            }
                         }
-                    }
-                },
-                CellContent::Trap => {
-                    console::log_1(&format!("Player placed trap at ({}, {})", row, col).into());
-                },
-                _ => {}
-            }
-        }
-
-        // Process opponent move if available
-        if step < opponent_board.sequence.len() {
-            let (row, col, content) = opponent_board.sequence[step].clone();
-            let (rot_row, rot_col) = self.rotate_position(row, col);
-            console::log_1(&format!("Opponent: Processing row {} col {} ({:?})", rot_row, rot_col, content).into());
-            
-            match content {
-                CellContent::Player => {
-                    if self.opponent_collision_step.map_or(true, |collision| step <= collision) {
-                        temp_opponent_pos = Some((rot_row, rot_col));
-                        console::log_1(&format!("Opponent position updated to ({}, {})", rot_row, rot_col).into());
-                        
-                        if rot_row == self.size - 1 && opponent_goal_step.is_none() {
-                            opponent_goal_step = Some(step);
-                            console::log_1(&"GOAL: Opponent reached final row!".into());
-                        }
-                    }
-                },
-                CellContent::Trap => {
-                    console::log_1(&format!("Opponent placed trap at ({}, {})", rot_row, rot_col).into());
-                },
-                _ => {}
-            }
-        }
-        // Check for collisions and traps
-        self.check_and_record_collisions(
-            temp_player_pos,
-            temp_opponent_pos,
-            player_board,
-            opponent_board,
-            step
-        );
-
-        // Update positions if no previous collisions, or if this is the collision step
-        if self.player_collision_step.map_or(true, |collision| step <= collision) {
-            if let (Some(temp_pos), Some((old_row, _))) = (temp_player_pos, player_pos) {
-                let (new_row, _) = temp_pos;
-                // Only update score if no collision yet and no goal reached by opponent
-                if self.player_collision_step.is_none() && 
-                   opponent_goal_step.map_or(true, |g| step <= g) {
-                    let score = self.calculate_step_score(old_row, new_row, false);
-                    if score > 0 {
-                        self.player_score += score;
-                        console::log_1(&format!("Player score +{} (moved from row {} to {})", 
-                            score, old_row, new_row).into());
-                    }
+                    },
+                    CellContent::Trap => {
+                        console::log_1(&format!("Player placed trap at ({}, {})", row, col).into());
+                    },
+                    _ => {}
                 }
             }
-            player_pos = temp_player_pos;
-        }
 
-        if self.opponent_collision_step.map_or(true, |collision| step <= collision) {
-            if let (Some(temp_pos), Some((old_row, _))) = (temp_opponent_pos, opponent_pos) {
-                let (new_row, _) = temp_pos;
-                // Only update score if no collision yet and no goal reached by player
-                if self.opponent_collision_step.is_none() && 
-                   player_goal_step.map_or(true, |g| step <= g) {
-                    let score = self.calculate_step_score(old_row, new_row, true);
-                    if score > 0 {
-                        self.opponent_score += score;
-                        console::log_1(&format!("Opponent score +{} (moved from row {} to {})", 
-                            score, old_row, new_row).into());
-                    }
+            // Do the same for the opponent section:
+            if step < opponent_board.sequence.len() {
+                let (row, col, content) = opponent_board.sequence[step].clone();
+                let (rot_row, rot_col) = self.rotate_position(row, col);
+                console::log_1(&format!("Opponent: Processing row {} col {} ({:?})", rot_row, rot_col, content).into());
+                
+                match content {
+                    CellContent::Player => {
+                        if self.opponent_collision_step.map_or(true, |collision| step <= collision) {
+                            temp_opponent_pos = Some((rot_row, rot_col));
+                            console::log_1(&format!("Opponent position updated to ({}, {})", rot_row, rot_col).into());
+                            
+                            // Only record goal if this isn't also a collision step
+                            if rot_row == self.size - 1 && opponent_goal_step.is_none() && 
+                            !self.check_piece_collision(Some((rot_row, rot_col)), temp_player_pos) {
+                                opponent_goal_step = Some(step);
+                                console::log_1(&"GOAL: Opponent reached final row!".into());
+                            }
+                        }
+                    },
+                    CellContent::Trap => {
+                        console::log_1(&format!("Opponent placed trap at ({}, {})", rot_row, rot_col).into());
+                    },
+                    _ => {}
                 }
             }
-            opponent_pos = temp_opponent_pos;
-        }
 
-        // Add bonus point for reaching goal, but only if haven't collided before reaching it
-        if let Some(goal_step) = player_goal_step {
-            if step == goal_step && self.player_collision_step.is_none() {
-                self.player_score += 1;
-                console::log_1(&"BONUS: Player +1 for reaching goal!".into());
+            // Check for collisions and traps
+            self.check_and_record_collisions(
+                temp_player_pos,
+                temp_opponent_pos,
+                player_board,
+                opponent_board,
+                step
+            );
+
+            // Update positions if no previous collisions, or if this is the collision step
+            if self.player_collision_step.map_or(true, |collision| step <= collision) {
+                if let (Some(temp_pos), Some((old_row, _))) = (temp_player_pos, player_pos) {
+                    let (new_row, _) = temp_pos;
+                    // Only update score if no collision yet and no goal reached by opponent
+                    if self.player_collision_step.is_none() && 
+                    opponent_goal_step.map_or(true, |g| step <= g) {
+                        let score = self.calculate_step_score(old_row, new_row, false);
+                        if score > 0 {
+                            self.player_score += score;
+                            console::log_1(&format!("Player score +{} (moved from row {} to {})", 
+                                score, old_row, new_row).into());
+                        }
+                    }
+                }
+                player_pos = temp_player_pos;
             }
-        }
 
-        if let Some(goal_step) = opponent_goal_step {
-            if step == goal_step && self.opponent_collision_step.is_none() {
-                self.opponent_score += 1;
-                console::log_1(&"BONUS: Opponent +1 for reaching goal!".into());
+            if self.opponent_collision_step.map_or(true, |collision| step <= collision) {
+                if let (Some(temp_pos), Some((old_row, _))) = (temp_opponent_pos, opponent_pos) {
+                    let (new_row, _) = temp_pos;
+                    // Only update score if no collision yet and no goal reached by player
+                    if self.opponent_collision_step.is_none() && 
+                    player_goal_step.map_or(true, |g| step <= g) {
+                        let score = self.calculate_step_score(old_row, new_row, true);
+                        if score > 0 {
+                            self.opponent_score += score;
+                            console::log_1(&format!("Opponent score +{} (moved from row {} to {})", 
+                                score, old_row, new_row).into());
+                        }
+                    }
+                }
+                opponent_pos = temp_opponent_pos;
             }
+
+            // Add bonus point for reaching goal, but only if haven't collided before reaching it
+            if let Some(goal_step) = player_goal_step {
+                if step == goal_step && self.player_collision_step.is_none() {
+                    self.player_score += 1;
+                    console::log_1(&"BONUS: Player +1 for reaching goal!".into());
+                }
+            }
+
+            if let Some(goal_step) = opponent_goal_step {
+                if step == goal_step && self.opponent_collision_step.is_none() {
+                    self.opponent_score += 1;
+                    console::log_1(&"BONUS: Opponent +1 for reaching goal!".into());
+                }
+            }
+
+            // Update final positions
+            self.player_position = player_pos;
+            self.opponent_position = opponent_pos;
+
+            console::log_1(&format!("Current Scores - Player: {}, Opponent: {}", 
+                self.player_score, self.opponent_score).into());
         }
 
-        // Update final positions
-        self.player_position = player_pos;
-        self.opponent_position = opponent_pos;
-
-        console::log_1(&format!("Current Scores - Player: {}, Opponent: {}", 
-            self.player_score, self.opponent_score).into());
-    }
-
-    // Final round summary
-    console::log_1(&"\n========== ROUND COMPLETE ==========".into());
-    console::log_1(&format!("Player collision at step: {:?}", self.player_collision_step).into());
-    console::log_1(&format!("Opponent collision at step: {:?}", self.opponent_collision_step).into());
-    console::log_1(&format!("Player reached goal at step: {:?}", player_goal_step).into());
-    console::log_1(&format!("Opponent reached goal at step: {:?}", opponent_goal_step).into());
-    console::log_1(&format!("Final Player Position: {:?}", self.player_position).into());
-    console::log_1(&format!("Final Opponent Position: {:?}", self.opponent_position).into());
-    console::log_1(&format!("Final Scores - Player: {}, Opponent: {}", 
+        // Final round summary
+        console::log_1(&"\n========== ROUND COMPLETE ==========".into());
+        console::log_1(&format!("Player collision at step: {:?}", self.player_collision_step).into());
+        console::log_1(&format!("Opponent collision at step: {:?}", self.opponent_collision_step).into());
+        console::log_1(&format!("Player reached goal at step: {:?}", player_goal_step).into());
+        console::log_1(&format!("Opponent reached goal at step: {:?}", opponent_goal_step).into());
+        console::log_1(&format!("Final Player Position: {:?}", self.player_position).into());
+        console::log_1(&format!("Final Opponent Position: {:?}", self.opponent_position).into());
+        console::log_1(&format!("Final Scores - Player: {}, Opponent: {}", 
         self.player_score, self.opponent_score).into());
     }
 
