@@ -537,69 +537,105 @@ impl GameBoard {
             false
         }
     }
-    
+
     fn process_moves(&self, player_board: &Board, opponent_board: &Board, step: usize) -> (MoveType, MoveType) {
-        console::log_1(&format!("\n=== Processing Moves for Step {} ===", step + 1).into());
-    
         let player_move = if step < player_board.sequence.len() {
-            let (row, col, content) = player_board.sequence[step];
-            console::log_1(&format!("Player raw move: row={}, col={}, content={:?}", row, col, content).into());
-            
+            let (row, col, content) = player_board.sequence[step].clone();
             match content {
                 CellContent::Player => {
                     if row == 0 {
-                        console::log_1(&"Player reached final row - registering as Final move".into());
                         MoveType::Final
                     } else {
-                        console::log_1(&"Player made regular move".into());
                         MoveType::Regular(row, col)
                     }
                 },
-                CellContent::Trap => {
-                    console::log_1(&"Player placed trap".into());
-                    MoveType::Trap(row, col)
-                },
-                _ => {
-                    console::log_1(&"Player made no move".into());
-                    MoveType::None
-                },
+                CellContent::Trap => MoveType::Trap(row, col),
+                _ => MoveType::None,
             }
         } else {
-            console::log_1(&"No more moves in player sequence".into());
             MoveType::None
         };
-    
+
         let opponent_move = if step < opponent_board.sequence.len() {
-            let (row, col, content) = opponent_board.sequence[step];
+            let (row, col, content) = opponent_board.sequence[step].clone();
+            // Rotate opponent's position
             let (rot_row, rot_col) = self.rotate_position(row, col);
-            console::log_1(&format!("Opponent raw move: row={}, col={}, content={:?}", row, col, content).into());
-            console::log_1(&format!("Opponent rotated position: row={}, col={}", rot_row, rot_col).into());
-            
             match content {
                 CellContent::Player => {
                     if rot_row == self.size - 1 {
-                        console::log_1(&"Opponent reached final row - registering as Final move".into());
                         MoveType::Final
                     } else {
-                        console::log_1(&"Opponent made regular move".into());
                         MoveType::Regular(rot_row, rot_col)
                     }
                 },
-                CellContent::Trap => {
-                    console::log_1(&"Opponent placed trap".into());
-                    MoveType::Trap(rot_row, rot_col)
-                },
-                _ => {
-                    console::log_1(&"Opponent made no move".into());
-                    MoveType::None
-                },
+                CellContent::Trap => MoveType::Trap(rot_row, rot_col),
+                _ => MoveType::None,
             }
         } else {
-            console::log_1(&"No more moves in opponent sequence".into());
             MoveType::None
         };
-    
-        console::log_1(&format!("Final processed moves - Player: {:?}, Opponent: {:?}", player_move, opponent_move).into());
+
         (player_move, opponent_move)
+    }
+    
+    pub fn process_turn(&mut self, player_board: &Board, opponent_board: &Board) {
+        console::log_1(&"\n====== Starting New Game Round ======".into());
+        
+        let mut current_step = 0;
+        
+        // Store sequences for collision step tracking
+        self.player_sequence = player_board.sequence.clone();
+        self.opponent_sequence = opponent_board.sequence.clone();
+        
+        loop {
+            console::log_1(&format!("\n=== Step {} ===", current_step + 1).into());
+            
+            // Start Turn (A) and Process Moves (P1, P2)
+            let (p1_move, p2_move) = self.process_moves(player_board, opponent_board, current_step);
+            
+            // Handle Moves (M1, M2)
+            let (p1_result, p2_result) = self.handle_moves(p1_move, p2_move, current_step);
+            
+            // Check Collisions (CH1, D)
+            if self.check_collisions(&p1_result, &p2_result) {
+                console::log_1(&"Round ended due to collision".into());
+                break;
+            }
+            
+            // Check Traps (TC)
+            let (p1_hit_trap, p2_hit_trap) = self.check_traps(&p1_result, &p2_result, player_board, opponent_board);
+            
+            // Handle trap hits
+            if p1_hit_trap {
+                self.player_collision_step = Some(current_step);
+                console::log_1(&"Player's turn ended due to trap".into());
+            }
+            if p2_hit_trap {
+                self.opponent_collision_step = Some(current_step);
+                console::log_1(&"Opponent's turn ended due to trap".into());
+            }
+            
+            // Update states and scores if no traps were hit
+            if !p1_hit_trap {
+                self.update_player_state(&p1_result, false);
+            }
+            if !p2_hit_trap {
+                self.update_player_state(&p2_result, true);
+            }
+            
+            // Check if round is complete
+            if self.is_round_complete(current_step, player_board, opponent_board) {
+                console::log_1(&"Round complete!".into());
+                break;
+            }
+            
+            current_step += 1;
+        }
+    
+        console::log_1(&"\n====== Round Summary ======".into());
+        console::log_1(&format!("Final player score: {}", self.player_score).into());
+        console::log_1(&format!("Final opponent score: {}", self.opponent_score).into());
+        console::log_1(&format!("Player collision step: {:?}", self.player_collision_step).into());
+        console::log_1(&format!("Opponent collision step: {:?}", self.opponent_collision_step).into());
     }
 }
