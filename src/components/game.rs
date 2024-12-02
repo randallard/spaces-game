@@ -11,7 +11,6 @@ use serde::{Serialize, Deserialize};
 use std::time::Duration;
 use super::utils::load_saved_boards;
 use rand; 
-use rand::seq::SliceRandom; 
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub enum GamePhase {

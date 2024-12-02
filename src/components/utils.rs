@@ -1,4 +1,4 @@
-use web_sys::{console, window};
+use web_sys::window;
 use leptos::prelude::*;
 use std::fmt::Write;
 use super::board::{Board, CellContent, SavedBoard};

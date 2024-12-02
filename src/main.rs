@@ -6,7 +6,7 @@ use serde::{Serialize, Deserialize};
 
 mod components;
 use components::board::BoardCreator;
-use components::game::{Game, GameSpeed, GameState};
+use components::game::{Game, GameSpeed};
 use components::saved_boards::SavedBoards;
 use components::opponent::{
     delete_opponent, Opponent, OpponentType, load_opponents, save_opponent

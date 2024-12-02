@@ -3,7 +3,6 @@ use std::time::Duration;
 use leptos::*;
 use leptos::prelude::*;
 use serde::{Serialize, Deserialize};
-use web_sys::console;
 
 use crate::components::utils::{generate_thumbnail, save_board};
 use crate::components::saved_boards::get_board_trigger;
