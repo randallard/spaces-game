@@ -1,5 +1,6 @@
 use leptos::*;
 use leptos::prelude::*;
+use leptos::wasm_bindgen::JsCast;
 use web_sys::{MouseEvent, Storage, window};
 use serde::{Serialize, Deserialize};
 
@@ -163,7 +164,7 @@ fn App() -> impl IntoView {
                                         {
                                             let delete_opponent = opponent.clone();
                                             view! {
-                                                <div class="relative group">
+                                                <div class="flex gap-1">
                                                 {
                                                     let opponent_lightning = opponent.clone();
                                                     let opponent_quick = opponent.clone();
@@ -171,44 +172,74 @@ fn App() -> impl IntoView {
                                                     let opponent_chill = opponent.clone();
                                                     view! {
                                                         <button
-                                                            class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded-t text-sm"
+                                                            class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded-l text-sm"
                                                             on:click=move |_| set_show_game.set(Some((opponent.clone(), default_game_speed.get())))
                                                         >
-                                                            "Play\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}▾"
+                                                            "Play\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}\u{00A0}"
                                                         </button>
-                                                        <div class="absolute hidden group-hover:block right-0 bg-green-600 rounded-b shadow-lg z-10">
+                                                        <div class="relative">
                                                             <button
-                                                                class="block w-full text-left px-3 py-1 hover:bg-green-700 text-sm border-t border-green-700"
-                                                                on:click=move |_| {
-                                                                    set_show_game.set(Some((opponent_lightning.clone(), GameSpeed::Lightning)));
+                                                                class="px-2 py-1 bg-green-600 hover:bg-green-700 rounded-r text-sm border-l border-green-700"
+                                                                on:click=move |ev| {
+                                                                    ev.prevent_default();
+                                                                    let target = ev.target().unwrap();
+                                                                    let element = target.dyn_into::<web_sys::Element>().unwrap();
+                                                                    if let Some(next_sibling) = element.next_sibling() {
+                                                                        next_sibling.dyn_ref::<web_sys::HtmlElement>()
+                                                                            .unwrap()
+                                                                            .style()
+                                                                            .set_property("display", "block")
+                                                                            .unwrap();
+                                                                    }
                                                                 }
                                                             >
-                                                                "Lightning!\u{00A0}(1s\u{00A0}to\u{00A0}choose)"
+                                                                "▾"
                                                             </button>
-                                                            <button
-                                                                class="block w-full text-left px-3 py-1 hover:bg-green-700 text-sm border-t border-green-700"
-                                                                on:click=move |_| {
-                                                                    set_show_game.set(Some((opponent_quick.clone(), GameSpeed::Quick)));
+                                                            <div 
+                                                                class="absolute hidden right-0 bg-green-600 rounded-b shadow-lg z-10"
+                                                                on:mouseleave=move |ev| {
+                                                                    ev.target().unwrap().dyn_ref::<web_sys::HtmlElement>()
+                                                                        .unwrap()
+                                                                        .style()
+                                                                        .set_property("display", "none")
+                                                                        .unwrap();
                                                                 }
                                                             >
-                                                                "Quick!\u{00A0}(5s\u{00A0}to\u{00A0}choose)"
-                                                            </button>
-                                                            <button
-                                                                class="block w-full text-left px-3 py-1 hover:bg-green-700 text-sm border-t border-green-700"
-                                                                on:click=move |_| {
-                                                                    set_show_game.set(Some((opponent_relaxed.clone(),GameSpeed::Relaxed)));
-                                                                }
-                                                            >
-                                                                "Relaxed\u{00A0}(10s\u{00A0}to\u{00A0}choose)"
-                                                            </button>
-                                                            <button
-                                                                class="block w-full text-left px-3 py-1 hover:bg-green-700 text-sm border-t border-green-700"
-                                                                on:click=move |_| {
-                                                                    set_show_game.set(Some((opponent_chill.clone(),GameSpeed::Chill)));
-                                                                }
-                                                            >
-                                                                "Totally\u{00A0}Chill\u{00A0}(no\u{00A0}limit)"
-                                                            </button>
+
+                                                            
+                                                                    <button
+                                                                        class="block w-full text-left px-3 py-1 hover:bg-green-700 text-sm border-t border-green-700"
+                                                                        on:click=move |_| {
+                                                                            set_show_game.set(Some((opponent_lightning.clone(), GameSpeed::Lightning)));
+                                                                        }
+                                                                    >
+                                                                        "Lightning!\u{00A0}(1s\u{00A0}to\u{00A0}choose)"
+                                                                    </button>
+                                                                    <button
+                                                                        class="block w-full text-left px-3 py-1 hover:bg-green-700 text-sm border-t border-green-700"
+                                                                        on:click=move |_| {
+                                                                            set_show_game.set(Some((opponent_quick.clone(), GameSpeed::Quick)));
+                                                                        }
+                                                                    >
+                                                                        "Quick!\u{00A0}(5s\u{00A0}to\u{00A0}choose)"
+                                                                    </button>
+                                                                    <button
+                                                                        class="block w-full text-left px-3 py-1 hover:bg-green-700 text-sm border-t border-green-700"
+                                                                        on:click=move |_| {
+                                                                            set_show_game.set(Some((opponent_relaxed.clone(),GameSpeed::Relaxed)));
+                                                                        }
+                                                                    >
+                                                                        "Relaxed\u{00A0}(10s\u{00A0}to\u{00A0}choose)"
+                                                                    </button>
+                                                                    <button
+                                                                        class="block w-full text-left px-3 py-1 hover:bg-green-700 text-sm border-t border-green-700 rounded-b"  // Added rounded-b
+                                                                        on:click=move |_| {
+                                                                            set_show_game.set(Some((opponent_chill.clone(),GameSpeed::Chill)));
+                                                                        }
+                                                                    >
+                                                                        "Totally\u{00A0}Chill\u{00A0}(no\u{00A0}limit)"
+                                                                    </button>
+                                                                </div>
                                                         </div>
                                                     }
                                                 }
