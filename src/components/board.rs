@@ -47,11 +47,23 @@ fn reset_board(
     finished.set(false);
 }
 
+fn content_is_final_move(sequence: &[(usize, usize, CellContent)]) -> bool {
+    if let Some(&(row, _, ref content)) = sequence.last() {
+        matches!(content, CellContent::Player) && row == 0
+    } else {
+        false
+    }
+}
+
 fn has_valid_moves(board: &Board) -> bool {
     if let Some((player_row, player_col)) = find_player(board) {
-        if player_row == 0 {
+        // Check if the player has already reached the final state via sequence
+        if board.sequence.last().map_or(false, |(_, _, content)| {
+            matches!(content, CellContent::Player) && content_is_final_move(&board.sequence)
+        }) {
             return true;
         }
+        // Check available moves
         for i in 0..board.size {
             for j in 0..board.size {
                 if matches!(board.grid[i][j], CellContent::Empty) 
@@ -83,7 +95,7 @@ pub fn BoardCreator(
         } else if !finished.get() {
             let player_pos = find_player(&current_board);
             if let Some((player_row, player_col)) = player_pos {
-                if player_row == 0 || is_adjacent(player_row, player_col, row, col) {
+                if content_is_final_move(&current_board.sequence) || is_adjacent(player_row, player_col, row, col) {
                     if row == usize::MAX {  // Special case for final move
                         // Only add the final move sequence, no grid changes
                         current_board.sequence.push((0, player_col, CellContent::Player));

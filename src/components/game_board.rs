@@ -176,18 +176,21 @@ impl GameBoard {
             return true;
         }
     
-        // Check if either player reached their goal
-        if let Some((player_row, _)) = self.player_position {
-            if player_row == 0 {
-                console::log_1(&"Round complete: Player reached goal".into());
-                return true;
-            }
+        // Check if either player reached their goal via sequence
+        let player_reached_goal = player_board.sequence.last().map_or(false, |(row, _, content)| {
+            matches!(content, CellContent::Player) && *row == 0
+        });
+        let opponent_reached_goal = opponent_board.sequence.last().map_or(false, |(row, _, content)| {
+            matches!(content, CellContent::Player) && *row == self.size - 1
+        });
+
+        if player_reached_goal {
+            console::log_1(&"Round complete: Player reached goal".into());
+            return true;
         }
-        if let Some((opponent_row, _)) = self.opponent_position {
-            if opponent_row == self.size - 1 {
-                console::log_1(&"Round complete: Opponent reached goal".into());
-                return true;
-            }
+        if opponent_reached_goal {
+            console::log_1(&"Round complete: Opponent reached goal".into());
+            return true;
         }
     
         console::log_1(&"Round not complete - continuing".into());
@@ -401,7 +404,10 @@ impl GameBoard {
             let (row, col, content) = player_board.sequence[step].clone();
             match content {
                 CellContent::Player => {
-                    if row == 0 {
+                    // Check if this is the final move in sequence
+                    if player_board.sequence.last().map_or(false, |&(last_row, _, _)| {
+                        row == last_row && row == 0
+                    }) {
                         MoveType::Final
                     } else {
                         MoveType::Regular(row, col)
@@ -420,7 +426,10 @@ impl GameBoard {
             let (rot_row, rot_col) = self.rotate_position(row, col);
             match content {
                 CellContent::Player => {
-                    if rot_row == self.size - 1 {
+                    // Check if this is the final move in sequence
+                    if opponent_board.sequence.last().map_or(false, |&(last_row, _, _)| {
+                        row == last_row && row == opponent_board.size - 1
+                    }) {
                         MoveType::Final
                     } else {
                         MoveType::Regular(rot_row, rot_col)
@@ -435,7 +444,7 @@ impl GameBoard {
 
         (player_move, opponent_move)
     }
-    
+
     pub fn process_turn(&mut self, player_board: &Board, opponent_board: &Board) {
         console::log_1(&"\n====== Starting New Game Round ======".into());
         
