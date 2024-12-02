@@ -1,6 +1,8 @@
 use leptos::*;
 use leptos::prelude::*;
 use leptos::callback::Callback;
+use web_sys::console;
+use crate::components::board::CellContent;
 use crate::components::opponent::OpponentType;
 use crate::components::utils::{generate_thumbnail, generate_opponent_thumbnail};
 
@@ -15,18 +17,17 @@ use rand;
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub enum GamePhase {
     SelectingBoards,
-    DisplayingBoards,  // Add this
+    DisplayingBoards,  
     ShowingResults,
-    RoundComplete,     // Add this
+    RoundComplete,  
 }
 
-// Add this near the top with other enums
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub enum GameSpeed {
-    Lightning, // 1 second
-    Quick,    // 5 seconds
-    Relaxed,  // 10 seconds
-    Chill,    // No limit
+    Lightning, 
+    Quick,    
+    Relaxed,  
+    Chill,    
 }
 
 #[derive(Clone)]
@@ -75,7 +76,7 @@ pub fn Game(
 ) -> impl IntoView {
     let game_state = RwSignal::new({
         let mut state = GameState::new(player_name, opponent);
-        state.speed = speed;  // Set the speed from prop
+        state.speed = speed;  
         state
     });
     let boards = Memo::new(|_| load_saved_boards().unwrap_or_default());
@@ -238,26 +239,41 @@ pub fn Game(
                                         if let Some(game_board) = &state.game_board {
                                             view! {
                                                 <div class="flex flex-col items-center gap-2">
-                                                    // Add player success message
-                                                    {(game_board.player_position.map_or(false, |(row, _)| row == 0)).then(|| view! {
-                                                        <div class="text-green-400 font-bold text-lg">
-                                                            {state.player1.clone()} " Made it!"
+                                                {
+                                                    // Debug logging for player
+                                                    console::log_1(&format!("Player position: {:?}", game_board.player_position).into());
+                                                    console::log_1(&format!("Board size: {}", game_board.size).into());
+                                                    
+                                                    // Player success message - using normal tuple access
+                                                    (game_board.player_sequence.last().map_or(false, |last_move| 
+                                                        last_move.0 == 0 && matches!(last_move.2, CellContent::Player)
+                                                    )).then(|| view! {
+                                                        <div class="text-blue-600 font-bold text-lg">
+                                                            "Made it!"
                                                         </div>
-                                                    })}
+                                                    })
+                                                }
+                                                
+                                                <img 
+                                                    src=game_board.generate_board_svg(&board1.board, &board2.board)
+                                                    alt="Game board" 
+                                                    class="w-96 h-96 rounded border border-slate-700"
+                                                />
+                                                
+                                                {
+                                                    // Debug logging for opponent
+                                                    console::log_1(&format!("Opponent position: {:?}", game_board.opponent_position).into());
                                                     
-                                                    <img 
-                                                        src=game_board.generate_board_svg(&board1.board, &board2.board)
-                                                        alt="Game board" 
-                                                        class="w-96 h-96 rounded border border-slate-700"
-                                                    />
-                                                    
-                                                    // Add opponent success message
-                                                    {(game_board.opponent_position.map_or(false, |(row, _)| row == game_board.size - 1)).then(|| view! {
-                                                        <div class="text-purple-400 font-bold text-lg">
+                                                    // Opponent success message - using normal tuple access
+                                                    (game_board.opponent_sequence.last().map_or(false, |last_move| 
+                                                        last_move.0 == game_board.size - 1 && matches!(last_move.2, CellContent::Player)
+                                                    )).then(|| view! {
+                                                        <div class="text-purple-600 font-bold text-lg">
                                                             {state.player2.as_ref().map(|p| p.name.clone()).unwrap_or_default()} " Made it!"
                                                         </div>
-                                                    })}
-                                                </div>
+                                                    })
+                                                }
+                                            </div>
                                             }.into_any()
                                         } else {
                                             view! { <div>"Loading..."</div> }.into_any()
