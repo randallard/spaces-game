@@ -11,11 +11,11 @@ use components::opponent::{
     delete_opponent, Opponent, OpponentType, load_opponents, save_opponent
 };
 
-#[derive(Serialize, Deserialize)]
-struct UserData {
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+pub struct UserData {
     name: String,
     greeting: String,
-    default_game_speed: GameSpeed, // Add this
+    default_game_speed: GameSpeed,
 }
 
 fn get_local_storage() -> Option<Storage> {
@@ -24,8 +24,25 @@ fn get_local_storage() -> Option<Storage> {
 
 fn load_user_data() -> Option<UserData> {
     let storage = get_local_storage()?;
-    let data = storage.get_item("user_data").ok()??;
-    serde_json::from_str(&data).ok()
+    let data = match storage.get_item("user_data") {
+        Ok(Some(data)) => data,
+        Ok(None) => {
+            web_sys::console::log_1(&"No user data found in storage".into());
+            return None;
+        }
+        Err(e) => {
+            web_sys::console::log_1(&format!("Error loading user data: {:?}", e).into());
+            return None;
+        }
+    };
+    
+    match serde_json::from_str(&data) {
+        Ok(user_data) => Some(user_data),
+        Err(e) => {
+            web_sys::console::log_1(&format!("Error parsing user data: {:?}", e).into());
+            None
+        }
+    }
 }
 
 fn save_user_data(name: &str, greeting: &str, speed: GameSpeed) -> Result<(), serde_json::Error> {
@@ -36,7 +53,11 @@ fn save_user_data(name: &str, greeting: &str, speed: GameSpeed) -> Result<(), se
             default_game_speed: speed,
         };
         let json = serde_json::to_string(&data)?;
-        let _ = storage.set_item("user_data", &json);
+        storage.set_item("user_data", &json).unwrap_or_else(|e| {
+            web_sys::console::log_1(&format!("Failed to save to storage: {:?}", e).into());
+        });
+    } else {
+        web_sys::console::log_1(&"No local storage available".into());
     }
     Ok(())
 }
@@ -63,6 +84,7 @@ fn App() -> impl IntoView {
     if let Some(data) = load_user_data() {
         set_name.set(data.name);
         set_greeting.set(data.greeting);
+        set_default_game_speed.set(data.default_game_speed); // Add this line
         set_show_form.set(false);
     }
 
