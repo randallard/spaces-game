@@ -581,6 +581,16 @@ impl GameBoard {
     pub fn process_turn(&mut self, player_board: &Board, opponent_board: &Board) {
         console::log_1(&"\n====== Starting New Game Round ======".into());
         
+        console::log_1(&"\n=== Player Board Steps ===".into());
+        for (idx, (row, col, content)) in player_board.sequence.iter().enumerate() {
+            console::log_1(&format!("Step {}: row {} col {} {:?}", idx + 1, row, col, content).into());
+        }
+    
+        console::log_1(&"\n=== Opponent Board Steps ===".into());
+        for (idx, (row, col, content)) in opponent_board.sequence.iter().enumerate() {
+            console::log_1(&format!("Step {}: row {} col {} {:?}", idx + 1, row, col, content).into());
+        }
+
         let mut current_step = 0;
         
         // Store sequences for collision step tracking

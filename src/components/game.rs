@@ -2,7 +2,7 @@ use leptos::*;
 use leptos::prelude::*;
 use leptos::callback::Callback;
 use crate::components::opponent::OpponentType;
-use crate::components::utils::{generate_game_board, generate_thumbnail, generate_opponent_thumbnail};
+use crate::components::utils::{generate_thumbnail, generate_opponent_thumbnail};
 
 use super::board::SavedBoard;
 use super::opponent::Opponent;

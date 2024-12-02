@@ -3,6 +3,7 @@ use std::time::Duration;
 use leptos::*;
 use leptos::prelude::*;
 use serde::{Serialize, Deserialize};
+use web_sys::console;
 
 use crate::components::utils::{generate_thumbnail, save_board};
 use crate::components::saved_boards::get_board_trigger;
@@ -85,10 +86,15 @@ pub fn BoardCreator(
             if let Some((player_row, player_col)) = player_pos {
                 if player_row == 0 || is_adjacent(player_row, player_col, row, col) {
                     if row == usize::MAX {  // Special case for final move
+                        // Only add the final move sequence, no grid changes
+                        current_board.sequence.push((0, player_col, CellContent::Player));
+                        // Clear the player from the grid
+                        current_board.grid[player_row][player_col] = CellContent::Empty;
+                        
                         finished.set(true);
-                        let current_board = board.get();
                         let _ = save_board(current_board);
-                        get_board_trigger().update(|v| *v = !*v);  // Toggle to trigger refresh
+                        get_board_trigger().update(|v| *v = !*v);
+                        
                         set_timeout(move || {
                             reset_board(&board, &current_turn, &finished);
                         }, Duration::from_millis(333));
