@@ -97,8 +97,11 @@ impl GameBoard {
         // Check if player hit any existing opponent traps
         if let Some(p1_pos) = p1_result.new_position {
             let (row, col) = p1_pos;
-            if opponent_board.grid[row][col] == CellContent::Trap {
-                console::log_1(&format!("Player hit existing trap at {:?}", p1_pos).into());
+            // Get the rotated position for checking opponent's board
+            let (rot_row, rot_col) = self.rotate_position(row, col);
+            if opponent_board.grid[rot_row][rot_col] == CellContent::Trap {
+                console::log_1(&format!("Player hit existing trap at {:?} (rotated from {:?})", 
+                    (rot_row, rot_col), p1_pos).into());
                 p1_hit = true;
             }
         }
@@ -106,8 +109,11 @@ impl GameBoard {
         // Check if opponent hit any existing player traps
         if let Some(p2_pos) = p2_result.new_position {
             let (row, col) = p2_pos;
-            if player_board.grid[row][col] == CellContent::Trap {
-                console::log_1(&format!("Opponent hit existing trap at {:?}", p2_pos).into());
+            // Opponent's position is already rotated, so we need to un-rotate it to check player's board
+            let (rot_row, rot_col) = self.rotate_position(row, col);
+            if player_board.grid[rot_row][rot_col] == CellContent::Trap {
+                console::log_1(&format!("Opponent hit existing trap at {:?} (rotated from {:?})", 
+                    (rot_row, rot_col), p2_pos).into());
                 p2_hit = true;
             }
         }
@@ -168,6 +174,23 @@ impl GameBoard {
             return true;
         }
     
+        // Check current moves for goal completion
+        if current_step < player_board.sequence.len() {
+            let (row, _, ref content) = player_board.sequence[current_step];
+            if matches!(content, CellContent::Player) && row == 0 {
+                console::log_1(&"Round complete: Player reached goal this turn".into());
+                return true;
+            }
+        }
+    
+        if current_step < opponent_board.sequence.len() {
+            let (row, _, ref content) = opponent_board.sequence[current_step];
+            if matches!(content, CellContent::Player) && row == opponent_board.size - 1 {
+                console::log_1(&"Round complete: Opponent reached goal this turn".into());
+                return true;
+            }
+        }
+    
         // Check if we're out of moves
         let moves_exhausted = current_step >= player_board.sequence.len() && 
                              current_step >= opponent_board.sequence.len();
@@ -176,27 +199,10 @@ impl GameBoard {
             return true;
         }
     
-        // Check if either player reached their goal via sequence
-        let player_reached_goal = player_board.sequence.last().map_or(false, |(row, _, content)| {
-            matches!(content, CellContent::Player) && *row == 0
-        });
-        let opponent_reached_goal = opponent_board.sequence.last().map_or(false, |(row, _, content)| {
-            matches!(content, CellContent::Player) && *row == self.size - 1
-        });
-
-        if player_reached_goal {
-            console::log_1(&"Round complete: Player reached goal".into());
-            return true;
-        }
-        if opponent_reached_goal {
-            console::log_1(&"Round complete: Opponent reached goal".into());
-            return true;
-        }
-    
         console::log_1(&"Round not complete - continuing".into());
         false
     }
-
+    
     fn handle_moves(&self, player_move: MoveType, opponent_move: MoveType, step: usize) -> (MoveResult, MoveResult) {
         console::log_1(&format!("\n=== Handling Moves for Step {} ===", step + 1).into());
 
