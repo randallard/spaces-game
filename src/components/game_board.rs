@@ -228,7 +228,7 @@ impl GameBoard {
                 MoveResult {
                     new_position: Some((row, col)),
                     trap_placed: None,
-                    points_earned: 0,
+                    points_earned: if moving_forward { 1 } else { 0 },
                     is_first_step: step == 0,
                     moving_forward,
                     goal_reached: row == 0,
@@ -271,7 +271,7 @@ impl GameBoard {
                 MoveResult {
                     new_position: Some((row, col)),
                     trap_placed: None,
-                    points_earned: 0,
+                    points_earned: if moving_forward { 1 } else { 0 },
                     is_first_step: step == 0,
                     moving_forward,
                     goal_reached: row == self.size - 1,
@@ -480,7 +480,7 @@ impl GameBoard {
     
         (player_move, opponent_move)
     }
-    
+
     pub fn process_turn(&mut self, player_board: &Board, opponent_board: &Board) {
         console::log_1(&"\n====== Starting New Game Round ======".into());
         
@@ -514,9 +514,14 @@ impl GameBoard {
             
             // Start Turn (A) and Process Moves (P1, P2)
             let (p1_move, p2_move) = self.process_moves(player_board, opponent_board, current_step);
-            
+            console::log_1(&"\n=== Move Types ===".into());
+            console::log_1(&format!("Player 1 Move: {:#?}", p1_move).into());
+            console::log_1(&format!("Player 2 Move: {:#?}", p2_move).into());
             // Handle Moves (M1, M2, C1, C2, T1, T2)
             let (mut p1_result, mut p2_result) = self.handle_moves(p1_move, p2_move, current_step);
+            console::log_1(&"\n=== Move Results ===".into());
+            console::log_1(&format!("Player 1 Move: {:#?}", p1_result).into());
+            console::log_1(&format!("Player 2 Move: {:#?}", p2_result).into());
             
             // Check Collisions (CH1, D)
             if self.check_collisions(&p1_result, &p2_result) {
@@ -542,6 +547,7 @@ impl GameBoard {
                     // First Step? (FS)
                     if p1_result.is_first_step || p2_result.is_first_step {
                         // Next turn without points on first step
+                        console::log_1(&"First step - no points awarded".into());
                         current_step += 1;
                         continue;
                     }
