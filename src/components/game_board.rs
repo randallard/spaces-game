@@ -213,9 +213,9 @@ impl GameBoard {
             MoveType::Final => MoveResult {
                 new_position: None,
                 trap_placed: None,
-                points_earned: 0,
+                points_earned: 1,
                 is_first_step: step == 0,
-                moving_forward: false,
+                moving_forward: true,
                 goal_reached: true,
             },
             MoveType::Regular(row, col) => {
@@ -256,9 +256,9 @@ impl GameBoard {
             MoveType::Final => MoveResult {
                 new_position: None,
                 trap_placed: None,
-                points_earned: 0,
+                points_earned: 1,
                 is_first_step: step == 0,
-                moving_forward: false,
+                moving_forward: true,
                 goal_reached: true,
             },
             MoveType::Regular(row, col) => {
@@ -421,9 +421,7 @@ impl GameBoard {
             let (row, col, content) = player_board.sequence[step].clone();
             let move_type = match content {
                 CellContent::Player => {
-                    if player_board.sequence.last().map_or(false, |&(last_row, _, _)| {
-                        row == last_row && row == 0
-                    }) {
+                    if step == player_board.sequence.len() - 1 && row == 0 {
                         console::log_1(&format!("P1 Step {}: Final move", step + 1).into());
                         MoveType::Final
                     } else {
@@ -451,9 +449,7 @@ impl GameBoard {
             let (rot_row, rot_col) = self.rotate_position(row, col);
             let move_type = match content {
                 CellContent::Player => {
-                    if opponent_board.sequence.last().map_or(false, |&(last_row, _, _)| {
-                        row == last_row && row == opponent_board.size - 1
-                    }) {
+                    if step == opponent_board.sequence.len() - 1  && row == opponent_board.size - 1 {
                         console::log_1(&format!("P2 Step {}: Final move", step + 1).into());
                         MoveType::Final
                     } else {
@@ -508,7 +504,17 @@ impl GameBoard {
         let mut current_step = 0;
         
         self.player_sequence = player_board.sequence.clone();
-        self.opponent_sequence = opponent_board.sequence.clone();        
+        self.opponent_sequence = opponent_board.sequence.clone();  
+
+        // Set initial positions from first moves
+        if let Some(&(row, col, CellContent::Player)) = player_board.sequence.first() {
+            self.player_position = Some((row, col));
+        }
+        if let Some(&(row, col, CellContent::Player)) = opponent_board.sequence.first() {
+            let (rot_row, rot_col) = self.rotate_position(row, col);
+            self.opponent_position = Some((rot_row, rot_col));
+        }
+
         'main_loop: loop {
             console::log_1(&format!("\n=== Step {} ===", current_step + 1).into());
             
