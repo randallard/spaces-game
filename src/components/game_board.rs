@@ -105,8 +105,8 @@ impl GameBoard {
         // Check if player 1 hit any existing opponent traps
         if let Some(p1_pos) = p1_result.new_position {
             let (row, col) = p1_pos;
-            if opponent_board.grid[row][col] == CellContent::Trap {
-                console::log_1(&format!("Player 1 hit existing trap at {:?}", p1_pos).into());
+            let (rot_row, rot_col) = self.rotate_position(row, col);
+            if opponent_board.grid[rot_row][rot_col] == CellContent::Trap {
                 p1_hit = true;
             }
         }
@@ -231,7 +231,7 @@ impl GameBoard {
                     points_earned: if moving_forward { 1 } else { 0 },
                     is_first_step: step == 0,
                     moving_forward,
-                    goal_reached: row == 0,
+                    goal_reached: false,
                 }
             },
             MoveType::Trap(row, col) => MoveResult {
@@ -274,7 +274,7 @@ impl GameBoard {
                     points_earned: if moving_forward { 1 } else { 0 },
                     is_first_step: step == 0,
                     moving_forward,
-                    goal_reached: row == self.size - 1,
+                    goal_reached: false,
                 }
             },
             MoveType::Trap(row, col) => MoveResult {
@@ -332,19 +332,37 @@ impl GameBoard {
                         if Some(idx) == self.player_collision_step {
                             let _ = write!(
                                 svg,
-                                r#"<circle cx="{:.0}" cy="{:.0}" r="18" fill="rgb(239, 68, 68)">
-                                    <animate attributeName="r" values="18;22;18" dur="0.5s" repeatCount="2"/>
-                                </circle>
+                                r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4"/>
+                                <circle cx="{:.0}" cy="{:.0}" r="18" fill="rgb(239, 68, 68)"/>
                                 <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                                x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
+                                x + 5.0, y + 5.0, x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
                             );
                         } else {
-                            let _ = write!(
-                                svg,
-                                r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(37, 99, 235)"/>
-                                <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                                x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
-                            );
+                            let opponent_passed = opponent_board.sequence.iter()
+                                .take(idx)
+                                .any(|&(orow, ocol, _)| {
+                                    let (rot_row, rot_col) = self.rotate_position(orow, ocol);
+                                    (rot_row, rot_col) == (i, j)
+                                });
+                        
+                            if opponent_passed {
+                                let _ = write!(
+                                    svg,
+                                    r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(147, 51, 234)"/>
+                                    <path d="M{} {} A15 15 0 0 0 {} {}" fill="rgb(37, 99, 235)"/>
+                                    <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                                    x + 20.0, y + 20.0,
+                                    x + 20.0, y + 20.0, x + 35.0, y + 20.0,
+                                    x + 20.0, y + 20.0, idx + 1
+                                );
+                            } else {
+                                let _ = write!(
+                                    svg,
+                                    r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(37, 99, 235)"/>
+                                    <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                                    x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
+                                );
+                            }
                         }
                     },
                     CellContent::Trap => {
@@ -376,19 +394,37 @@ impl GameBoard {
                         if Some(idx) == self.opponent_collision_step {
                             let _ = write!(
                                 svg,
-                                r#"<circle cx="{:.0}" cy="{:.0}" r="18" fill="rgb(239, 68, 68)">
-                                    <animate attributeName="r" values="18;22;18" dur="0.5s" repeatCount="2"/>
-                                </circle>
+                                r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>
+                                <circle cx="{:.0}" cy="{:.0}" r="18" fill="rgb(239, 68, 68)"/>
                                 <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                                x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
+                                x + 5.0, y + 5.0, x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
                             );
                         } else {
-                            let _ = write!(
-                                svg,
-                                r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(147, 51, 234)"/>
-                                <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                                x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
-                            );
+                            let player_passed = player_board.sequence.iter()
+                            .take(idx)
+                            .any(|&(prow, pcol, _)| {
+                                let (rot_row, rot_col) = self.rotate_position(rot_i, rot_j);
+                                (prow, pcol) == (rot_row, rot_col)
+                            });
+                        
+                            if player_passed {
+                                let _ = write!(
+                                    svg,
+                                    r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(37, 99, 235)"/>
+                                    <path d="M{} {} A15 15 0 0 1 {} {}" fill="rgb(147, 51, 234)"/>
+                                    <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                                    x + 20.0, y + 20.0,
+                                    x + 20.0, y + 20.0, x + 35.0, y + 20.0,
+                                    x + 20.0, y + 20.0, idx + 1
+                                );
+                            } else {
+                                let _ = write!(
+                                    svg,
+                                    r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(147, 51, 234)"/>
+                                    <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                                    x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
+                                );
+                            }
                         }
                     },
                     CellContent::Trap => {
@@ -421,7 +457,7 @@ impl GameBoard {
             let (row, col, content) = player_board.sequence[step].clone();
             let move_type = match content {
                 CellContent::Player => {
-                    if step == player_board.sequence.len() - 1 && row == 0 {
+                    if step == player_board.sequence.len() - 1 {
                         console::log_1(&format!("P1 Step {}: Final move", step + 1).into());
                         MoveType::Final
                     } else {
@@ -449,7 +485,7 @@ impl GameBoard {
             let (rot_row, rot_col) = self.rotate_position(row, col);
             let move_type = match content {
                 CellContent::Player => {
-                    if step == opponent_board.sequence.len() - 1  && row == opponent_board.size - 1 {
+                    if step == opponent_board.sequence.len() - 1 {
                         console::log_1(&format!("P2 Step {}: Final move", step + 1).into());
                         MoveType::Final
                     } else {
