@@ -233,6 +233,10 @@ pub fn Game(
                                             let mut current_state = state.clone();
                                             current_state.player1_score += game_board.player_score;
                                             current_state.player2_score += game_board.opponent_score;
+                                            
+                                            web_sys::console::log_1(&format!("Player score: {}", game_board.player_score).into());
+                                            web_sys::console::log_1(&format!("Opponent score: {}", game_board.opponent_score).into());
+        
                                             current_state.game_board = Some(game_board);
                                             game_state.set(current_state);
                                         }
@@ -244,14 +248,7 @@ pub fn Game(
                                                     console::log_1(&format!("Player position: {:?}", game_board.player_position).into());
                                                     console::log_1(&format!("Board size: {}", game_board.size).into());
                                                     
-                                                    // Player success message - using normal tuple access
-                                                    (game_board.player_sequence.last().map_or(false, |last_move| 
-                                                        last_move.0 == 0 && matches!(last_move.2, CellContent::Player)
-                                                    )).then(|| view! {
-                                                        <div class="text-blue-600 font-bold text-lg">
-                                                            "Made it!"
-                                                        </div>
-                                                    })
+                                
                                                 }
                                                 
                                                 <img 
@@ -264,14 +261,7 @@ pub fn Game(
                                                     // Debug logging for opponent
                                                     console::log_1(&format!("Opponent position: {:?}", game_board.opponent_position).into());
                                                     
-                                                    // Opponent success message - using normal tuple access
-                                                    (game_board.opponent_sequence.last().map_or(false, |last_move| 
-                                                        last_move.0 == game_board.size - 1 && matches!(last_move.2, CellContent::Player)
-                                                    )).then(|| view! {
-                                                        <div class="text-purple-600 font-bold text-lg">
-                                                            {state.player2.as_ref().map(|p| p.name.clone()).unwrap_or_default()} " Made it!"
-                                                        </div>
-                                                    })
+
                                                 }
                                             </div>
                                             }.into_any()

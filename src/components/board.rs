@@ -57,13 +57,12 @@ fn content_is_final_move(sequence: &[(usize, usize, CellContent)]) -> bool {
 
 fn has_valid_moves(board: &Board) -> bool {
     if let Some((player_row, player_col)) = find_player(board) {
-        // Check if the player has already reached the final state via sequence
-        if board.sequence.last().map_or(false, |(_, _, content)| {
-            matches!(content, CellContent::Player) && content_is_final_move(&board.sequence)
-        }) {
+        // First check if player is in top row - they always have the final move available
+        if player_row == 0 {
             return true;
         }
-        // Check available moves
+        
+        // Check available moves in adjacent squares
         for i in 0..board.size {
             for j in 0..board.size {
                 if matches!(board.grid[i][j], CellContent::Empty) 
@@ -88,6 +87,7 @@ pub fn BoardCreator(
     let handle_cell_click = move |row: usize, col: usize| {
         let mut current_board = board.get();
         if current_turn.get() == 0 && row == current_board.size - 1 {
+            // Initial move logic remains the same
             current_board.grid[row][col] = CellContent::Player;
             current_board.sequence.push((row, col, CellContent::Player));
             board.set(current_board);
@@ -95,27 +95,28 @@ pub fn BoardCreator(
         } else if !finished.get() {
             let player_pos = find_player(&current_board);
             if let Some((player_row, player_col)) = player_pos {
-                if content_is_final_move(&current_board.sequence) || is_adjacent(player_row, player_col, row, col) {
-                    if row == usize::MAX {  // Special case for final move
-                        // Only add the final move sequence, no grid changes
+                // Modified this condition to allow final move after placing trap
+                if row == usize::MAX || is_adjacent(player_row, player_col, row, col) {
+                    if row == usize::MAX {  // Final move logic
                         current_board.sequence.push((0, player_col, CellContent::Player));
-                        // Clear the player from the grid
                         current_board.grid[player_row][player_col] = CellContent::Empty;
+                        board.set(current_board.clone());  // Clone here before it's moved
                         
                         finished.set(true);
-                        let _ = save_board(current_board);
+                        let _ = save_board(current_board);  // Original is moved here
                         get_board_trigger().update(|v| *v = !*v);
                         
                         set_timeout(move || {
                             reset_board(&board, &current_turn, &finished);
                         }, Duration::from_millis(333));
                     } else {
+                        // Regular move logic remains the same
                         current_board.grid[player_row][player_col] = CellContent::Empty;
                         current_board.grid[row][col] = CellContent::Player;
                         current_board.sequence.push((row, col, CellContent::Player));
                         board.set(current_board);
-                        current_turn.update(|t| *t += 1);
                     }
+                    current_turn.update(|t| *t += 1);
                 }
             }
         }
