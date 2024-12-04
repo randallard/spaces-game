@@ -47,14 +47,6 @@ fn reset_board(
     finished.set(false);
 }
 
-fn content_is_final_move(sequence: &[(usize, usize, CellContent)]) -> bool {
-    if let Some(&(row, _, ref content)) = sequence.last() {
-        matches!(content, CellContent::Player) && row == 0
-    } else {
-        false
-    }
-}
-
 fn has_valid_moves(board: &Board) -> bool {
     if let Some((player_row, player_col)) = find_player(board) {
         // First check if player is in top row - they always have the final move available

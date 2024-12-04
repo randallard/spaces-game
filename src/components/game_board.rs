@@ -287,11 +287,11 @@ impl GameBoard {
                             if opponent_passed {
                                 let _ = write!(
                                     svg,
-                                    r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(147, 51, 234)"/>
-                                    <path d="M{} {} A15 15 0 0 0 {} {}" fill="rgb(37, 99, 235)"/>
+                                    r#"<path d="M{} {} a15 15 0 0 1 0 30 l0 -30" fill="rgb(147, 51, 234)"/>
+                                    <path d="M{} {} a15 15 0 0 0 0 30 l0 -30" fill="rgb(37, 99, 235)"/>
                                     <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                                    x + 20.0, y + 20.0,
-                                    x + 20.0, y + 20.0, x + 35.0, y + 20.0,
+                                    x + 20.0, y + 5.0,
+                                    x + 20.0, y + 5.0,
                                     x + 20.0, y + 20.0, idx + 1
                                 );
                             } else {
@@ -349,11 +349,11 @@ impl GameBoard {
                             if player_passed {
                                 let _ = write!(
                                     svg,
-                                    r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(37, 99, 235)"/>
-                                    <path d="M{} {} A15 15 0 0 1 {} {}" fill="rgb(147, 51, 234)"/>
+                                    r#"<path d="M{} {} a15 15 0 0 1 0 30 l0 -30" fill="rgb(147, 51, 234)"/>
+                                    <path d="M{} {} a15 15 0 0 0 0 30 l0 -30" fill="rgb(37, 99, 235)"/>
                                     <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                                    x + 20.0, y + 20.0,
-                                    x + 20.0, y + 20.0, x + 35.0, y + 20.0,
+                                    x + 20.0, y + 5.0,
+                                    x + 20.0, y + 5.0,
                                     x + 20.0, y + 20.0, idx + 1
                                 );
                             } else {
@@ -488,7 +488,7 @@ impl GameBoard {
             self.opponent_position = Some((rot_row, rot_col));
         }
 
-        'main_loop: loop {
+        loop {
             console::log_1(&format!("\n=== Step {} ===", current_step + 1).into());
             
             // Start Turn (A) and Process Moves (P1, P2)

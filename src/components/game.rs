@@ -2,7 +2,6 @@ use leptos::*;
 use leptos::prelude::*;
 use leptos::callback::Callback;
 use web_sys::console;
-use crate::components::board::CellContent;
 use crate::components::opponent::OpponentType;
 use crate::components::utils::{generate_thumbnail, generate_opponent_thumbnail};
 
