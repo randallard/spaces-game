@@ -1,7 +1,16 @@
-use std::fmt::Write;
+use std::{fmt::Write, thread::current};
 use crate::components::board::{Board, CellContent};
 
 use web_sys::console;
+
+// just for debugging
+#[derive(Debug)]
+struct Move {
+    player: &'static str,
+    action: &'static str,
+    position: (usize, usize),
+    step: usize,
+}
 
 #[derive(Debug)]
 enum MoveType {
@@ -22,6 +31,7 @@ pub struct GameBoard {
     pub opponent_collision_step: Option<usize>,
     pub player_score: i32,
     pub opponent_score: i32,
+    pub processed_sequence: Vec<(usize, usize, CellContent, bool, usize)>,
 }
 
 #[derive(Debug)]
@@ -54,6 +64,7 @@ impl GameBoard {
             opponent_collision_step: None,
             player_score: 0,
             opponent_score: 0,
+            processed_sequence: Vec::new(),
         }
     }
 
@@ -238,6 +249,22 @@ impl GameBoard {
     }
 
     pub fn generate_board_svg(&self, player_board: &Board, opponent_board: &Board) -> String {
+
+        let moves: Vec<Move> = self.processed_sequence.iter().map(|(row, col, content, is_opponent, step)| {
+            Move {
+                player: if *is_opponent { "Opponent" } else { "Player" },
+                action: match content {
+                    CellContent::Player => "Move",
+                    CellContent::Trap => "Place Trap",
+                    CellContent::Empty => "Empty",
+                },
+                position: (*row, *col),
+                step: *step,
+            }
+        }).collect();
+        
+        console::log_1(&format!("\n=== Processed Sequence ===\n{:#?}", moves).into());
+
         let mut svg = String::from(r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
                 <rect width="100" height="100" fill="rgb(30, 41, 59)"/>
                 <g transform="translate(5,5)">"#);
@@ -256,128 +283,39 @@ impl GameBoard {
         }
     
         // Draw pieces and traps for player's board
-        for (idx, &(i, j, ref content)) in player_board.sequence.iter().enumerate() {
-            if self.player_collision_step.map_or(true, |collision| idx <= collision) {
-                let x = j as f32 * 45.0;
-                let y = i as f32 * 45.0;
-                
-                // Skip the final move visualization if at top row
-                if i == 0 && idx == player_board.sequence.len() - 1 {
-                    continue;
-                }
-                
-                match content {
-                    CellContent::Player => {
-                        if Some(idx) == self.player_collision_step {
-                            let _ = write!(
-                                svg,
-                                r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4"/>
-                                <circle cx="{:.0}" cy="{:.0}" r="18" fill="rgb(239, 68, 68)"/>
-                                <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                                x + 5.0, y + 5.0, x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
-                            );
-                        } else {
-                            let opponent_passed = opponent_board.sequence.iter()
-                                .take(idx)
-                                .any(|&(orow, ocol, _)| {
-                                    let (rot_row, rot_col) = self.rotate_position(orow, ocol);
-                                    (rot_row, rot_col) == (i, j)
-                                });
-                        
-                            if opponent_passed {
-                                let _ = write!(
-                                    svg,
-                                    r#"<path d="M{} {} a15 15 0 0 1 0 30 l0 -30" fill="rgb(147, 51, 234)"/>
-                                    <path d="M{} {} a15 15 0 0 0 0 30 l0 -30" fill="rgb(37, 99, 235)"/>
-                                    <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                                    x + 20.0, y + 5.0,
-                                    x + 20.0, y + 5.0,
-                                    x + 20.0, y + 20.0, idx + 1
-                                );
-                            } else {
-                                let _ = write!(
-                                    svg,
-                                    r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(37, 99, 235)"/>
-                                    <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                                    x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
-                                );
-                            }
-                        }
-                    },
-                    CellContent::Trap => {
-                        let _ = write!(
-                            svg,
-                            r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4"/>"#,
-                            x + 5.0, y + 5.0
-                        );
-                    },
-                    _ => {}
-                }
+        for (row, col, content, is_opponent, current_step) in &self.processed_sequence {
+            let x = *col as f32 * 45.0;
+            let y = *row as f32 * 45.0;
+            
+            match content {
+                CellContent::Player => {
+                    let (color, step) = if *is_opponent {
+                        ("rgb(147, 51, 234)", current_step)  // opponent color
+                    } else {
+                        ("rgb(37, 99, 235)", current_step)   // player color
+                    };
+                    let _ = write!(
+                        svg,
+                        r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="{}"/>
+                        <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                        x + 20.0, y + 20.0, color, x + 20.0, y + 20.0, step
+                    );
+                },
+                CellContent::Trap => {
+                    let stroke_color = if *is_opponent {
+                        "rgb(249, 115, 22)"  // opponent trap color
+                    } else {
+                        "rgb(220, 38, 38)"   // player trap color
+                    };
+                    let _ = write!(
+                        svg,
+                        r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="{}" stroke-width="4"/>"#,
+                        x + 5.0, y + 5.0, stroke_color
+                    );
+                },
+                _ => {},
             }
-        }
-    
-        // Draw opponent moves (rotated)
-        for (idx, &(i, j, ref content)) in opponent_board.sequence.iter().enumerate() {
-            if self.opponent_collision_step.map_or(true, |collision| idx <= collision) {
-                let (rot_i, rot_j) = self.rotate_position(i, j);
-                let x = rot_j as f32 * 45.0;
-                let y = rot_i as f32 * 45.0;
-                
-                // Skip the final move visualization if at bottom row (rotated)
-                if rot_i == self.size - 1 && idx == opponent_board.sequence.len() - 1 {
-                    continue;
-                }
-                
-                match content {
-                    CellContent::Player => {
-                        if Some(idx) == self.opponent_collision_step {
-                            let _ = write!(
-                                svg,
-                                r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>
-                                <circle cx="{:.0}" cy="{:.0}" r="18" fill="rgb(239, 68, 68)"/>
-                                <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                                x + 5.0, y + 5.0, x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
-                            );
-                        } else {
-                            let player_passed = player_board.sequence.iter()
-                            .take(idx)
-                            .any(|&(prow, pcol, _)| {
-                                let (rot_row, rot_col) = self.rotate_position(rot_i, rot_j);
-                                (prow, pcol) == (rot_row, rot_col)
-                            });
-                        
-                            if player_passed {
-                                let _ = write!(
-                                    svg,
-                                    r#"<path d="M{} {} a15 15 0 0 1 0 30 l0 -30" fill="rgb(147, 51, 234)"/>
-                                    <path d="M{} {} a15 15 0 0 0 0 30 l0 -30" fill="rgb(37, 99, 235)"/>
-                                    <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                                    x + 20.0, y + 5.0,
-                                    x + 20.0, y + 5.0,
-                                    x + 20.0, y + 20.0, idx + 1
-                                );
-                            } else {
-                                let _ = write!(
-                                    svg,
-                                    r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(147, 51, 234)"/>
-                                    <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                                    x + 20.0, y + 20.0, x + 20.0, y + 20.0, idx + 1
-                                );
-                            }
-                        }
-                    },
-                    CellContent::Trap => {
-                        let _ = write!(
-                            svg,
-                            r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>"#,
-                            x + 5.0, y + 5.0
-                        );
-                    },
-                    _ => {}
-                }
-            }
-        }
-    
+        }    
         svg.push_str("</g></svg>");
         format!(r#"data:image/svg+xml,{}"#, urlencoding::encode(&svg))
     }
@@ -569,9 +507,23 @@ impl GameBoard {
             // Update positions if no traps were hit
             if self.player_collision_step.is_none() && p1_result.new_position.is_some() {
                 self.player_position = p1_result.new_position;
+                if let Some((row, col)) = p1_result.new_position {
+                    self.processed_sequence.push((row, col, CellContent::Player, false, current_step));
+                }
             }
             if self.opponent_collision_step.is_none() && p2_result.new_position.is_some() {
                 self.opponent_position = p2_result.new_position;
+                if let Some((row, col)) = p2_result.new_position {
+                    self.processed_sequence.push((row, col, CellContent::Player, true, current_step));
+                }
+            }
+
+            // Add traps to sequence
+            if let Some((row, col)) = p1_result.trap_placed {
+                self.processed_sequence.push((row, col, CellContent::Trap, false, current_step));
+            }
+            if let Some((row, col)) = p2_result.trap_placed {
+                self.processed_sequence.push((row, col, CellContent::Trap, true, current_step));
             }
             
             // Check if round is complete (NR)
