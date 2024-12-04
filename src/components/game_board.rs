@@ -95,28 +95,45 @@ impl GameBoard {
         p1_result: &MoveResult,
         p2_result: &MoveResult,
         player_board: &Board,
-        opponent_board: &Board
+        opponent_board: &Board,
+        current_step: usize  // Add current_step parameter
     ) -> TrapResult {
         console::log_1(&"\n=== Checking Existing Traps ===".into());
         
         let mut p1_hit = false;
         let mut p2_hit = false;
     
-        // Check if player 1 hit any existing opponent traps
+        // Check if player 1 hit any existing opponent traps (only from previous steps)
         if let Some(p1_pos) = p1_result.new_position {
             let (row, col) = p1_pos;
             let (rot_row, rot_col) = self.rotate_position(row, col);
-            if opponent_board.grid[rot_row][rot_col] == CellContent::Trap {
-                p1_hit = true;
+            
+            // Only consider traps placed in previous steps
+            for (step, &(trap_row, trap_col, ref content)) in opponent_board.sequence.iter().enumerate() {
+                if step > current_step {
+                    break; // Don't check future traps
+                }
+                if *content == CellContent::Trap && (trap_row, trap_col) == (rot_row, rot_col) {
+                    p1_hit = true;
+                    break;
+                }
             }
         }
     
-        // Check if player 2 hit any existing player traps
+        // Check if player 2 hit any existing player traps (only from previous steps)
         if let Some(p2_pos) = p2_result.new_position {
             let (row, col) = p2_pos;
-            if player_board.grid[row][col] == CellContent::Trap {
-                console::log_1(&format!("Player 2 hit existing trap at {:?}", p2_pos).into());
-                p2_hit = true;
+            
+            // Only consider traps placed in previous steps
+            for (step, &(trap_row, trap_col, ref content)) in player_board.sequence.iter().enumerate() {
+                if step > current_step {
+                    break; // Don't check future traps
+                }
+                if *content == CellContent::Trap && (trap_row, trap_col) == (row, col) {
+                    console::log_1(&format!("Player 2 hit existing trap at {:?}", p2_pos).into());
+                    p2_hit = true;
+                    break;
+                }
             }
         }
     
@@ -492,7 +509,7 @@ impl GameBoard {
             }
             
             // Check Traps (TC)
-            match self.check_traps(&p1_result, &p2_result, player_board, opponent_board) {
+            match self.check_traps(&p1_result, &p2_result, player_board, opponent_board, current_step) {
                 TrapResult::BothHit => {
                     console::log_1(&"Both players hit traps - ending round".into());
                     break;
@@ -561,8 +578,8 @@ impl GameBoard {
             let p1_done = self.player_collision_step.is_some() || current_step >= player_board.sequence.len();
             let p2_done = self.opponent_collision_step.is_some() || current_step >= opponent_board.sequence.len();
             
-            if p1_done && p2_done {
-                console::log_1(&"Both players have completed their sequences".into());
+            if ( p1_done && p2_done ) || p1_result.goal_reached || p2_result.goal_reached {
+                console::log_1(&"Round Finished".into());
                 break;
             }
             
