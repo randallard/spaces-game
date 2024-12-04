@@ -128,84 +128,6 @@ impl GameBoard {
         }
     }
 
-    fn update_player_state(&mut self, move_result: &MoveResult, is_opponent: bool) {
-        console::log_1(&format!("\n=== Updating State for {} ===", 
-            if is_opponent { "Opponent" } else { "Player" }).into());
-    
-        // Update position
-        if let Some(new_pos) = move_result.new_position {
-            if is_opponent {
-                self.opponent_position = Some(new_pos);
-                console::log_1(&format!("Updated opponent position to {:?}", new_pos).into());
-            } else {
-                self.player_position = Some(new_pos);
-                console::log_1(&format!("Updated player position to {:?}", new_pos).into());
-            }
-        }
-    
-        // Handle goal reached and scoring
-        if move_result.goal_reached {
-            console::log_1(&"Goal reached! Adding bonus point".into());
-            if is_opponent {
-                self.opponent_score += move_result.points_earned;
-                console::log_1(&format!("Opponent score now: {}", self.opponent_score).into());
-            } else {
-                self.player_score += move_result.points_earned;
-                console::log_1(&format!("Player score now: {}", self.player_score).into());
-            }
-        } else if move_result.points_earned > 0 {
-            // Add points for forward movement
-            if is_opponent {
-                self.opponent_score += move_result.points_earned;
-                console::log_1(&format!("Opponent earned {} points for forward movement. Total: {}", 
-                    move_result.points_earned, self.opponent_score).into());
-            } else {
-                self.player_score += move_result.points_earned;
-                console::log_1(&format!("Player earned {} points for forward movement. Total: {}", 
-                    move_result.points_earned, self.player_score).into());
-            }
-        }
-    }
-
-    fn is_round_complete(&self, current_step: usize, player_board: &Board, opponent_board: &Board) -> bool {
-        console::log_1(&"\n=== Checking Round Completion ===".into());
-    
-        // Check if both players hit something
-        let both_collided = self.player_collision_step.is_some() && self.opponent_collision_step.is_some();
-        if both_collided {
-            console::log_1(&"Round complete: Both players collided".into());
-            return true;
-        }
-    
-        // Check current moves for goal completion
-        if current_step < player_board.sequence.len() {
-            let (row, _, ref content) = player_board.sequence[current_step];
-            if matches!(content, CellContent::Player) && row == 0 {
-                console::log_1(&"Round complete: Player reached goal this turn".into());
-                return true;
-            }
-        }
-    
-        if current_step < opponent_board.sequence.len() {
-            let (row, _, ref content) = opponent_board.sequence[current_step];
-            if matches!(content, CellContent::Player) && row == opponent_board.size - 1 {
-                console::log_1(&"Round complete: Opponent reached goal this turn".into());
-                return true;
-            }
-        }
-    
-        // Check if we're out of moves
-        let moves_exhausted = current_step >= player_board.sequence.len() && 
-                             current_step >= opponent_board.sequence.len();
-        if moves_exhausted {
-            console::log_1(&"Round complete: No more moves".into());
-            return true;
-        }
-    
-        console::log_1(&"Round not complete - continuing".into());
-        false
-    }
-    
     fn handle_moves(&self, player_move: MoveType, opponent_move: MoveType, step: usize) -> (MoveResult, MoveResult) {
         console::log_1(&format!("\n=== Handling Moves for Step {} ===", step + 1).into());
     
@@ -455,7 +377,7 @@ impl GameBoard {
     
         let player_move = if step < player_board.sequence.len() {
             let (row, col, content) = player_board.sequence[step].clone();
-            let move_type = match content {
+            match content {
                 CellContent::Player => {
                     if step == player_board.sequence.len() - 1 {
                         console::log_1(&format!("P1 Step {}: Final move", step + 1).into());
@@ -473,8 +395,7 @@ impl GameBoard {
                     console::log_1(&format!("P1 Step {}: No move", step + 1).into());
                     MoveType::None
                 },
-            };
-            move_type
+            }
         } else {
             console::log_1(&format!("P1 Step {}: No more moves in sequence", step + 1).into());
             MoveType::None
@@ -483,7 +404,7 @@ impl GameBoard {
         let opponent_move = if step < opponent_board.sequence.len() {
             let (row, col, content) = opponent_board.sequence[step].clone();
             let (rot_row, rot_col) = self.rotate_position(row, col);
-            let move_type = match content {
+            match content {
                 CellContent::Player => {
                     if step == opponent_board.sequence.len() - 1 {
                         console::log_1(&format!("P2 Step {}: Final move", step + 1).into());
@@ -503,8 +424,7 @@ impl GameBoard {
                     console::log_1(&format!("P2 Step {}: No move", step + 1).into());
                     MoveType::None
                 },
-            };
-            move_type
+            }
         } else {
             console::log_1(&format!("P2 Step {}: No more moves in sequence", step + 1).into());
             MoveType::None
@@ -580,10 +500,29 @@ impl GameBoard {
                 TrapResult::Player1Hit => {
                     console::log_1(&"Player 1 hit trap - stopping their progress".into());
                     self.player_collision_step = Some(current_step);
+                    
+                    // Score points for moving forward (SC)
+                    if !p2_result.is_first_step && p2_result.moving_forward {
+                        p2_result.points_earned = 1;
+                        console::log_1(&"Player 2 scored a point for moving forward".into());
+                    }
+    
+                    // Update scores based on results
+                    self.opponent_score += p2_result.points_earned;
                 },
                 TrapResult::Player2Hit => {
                     console::log_1(&"Player 2 hit trap - stopping their progress".into());
                     self.opponent_collision_step = Some(current_step);
+
+                    
+                    // Score points for moving forward (SC)
+                    if !p1_result.is_first_step && p1_result.moving_forward {
+                        p1_result.points_earned = 1;
+                        console::log_1(&"Player 1 scored a point for moving forward".into());
+                    }
+    
+                    // Update scores based on results
+                    self.player_score += p1_result.points_earned;
                 },
                 TrapResult::NoTraps => {
                     // First Step? (FS)
