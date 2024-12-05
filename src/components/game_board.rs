@@ -14,8 +14,7 @@ struct Move {
 
 #[derive(Debug, Clone)]
 struct Square {
-    row: usize,
-    col: usize,
+    position: Option<(usize,usize)>,
     player_trap_step: Option<usize>,
     opponent_trap_step: Option<usize>,
     player_visits: Vec<usize>,
@@ -23,13 +22,14 @@ struct Square {
     collision_step: Option<usize>,
     player_trap_hit_step: Option<usize>,
     opponent_trap_hit_step: Option<usize>,
+    player_forward_move: bool,
+    opponent_forward_move: bool,
 }
 
 impl Square {
     fn new(row: usize, col: usize) -> Self {
         Square {
-            row,
-            col,
+            position: Some((row,col)),
             player_trap_step: None,
             opponent_trap_step: None,
             player_visits: Vec::new(),
@@ -37,6 +37,8 @@ impl Square {
             collision_step: None,
             player_trap_hit_step: None,
             opponent_trap_hit_step: None,
+            player_forward_move: false,
+            opponent_forward_move: false,
         }
     }
 }
@@ -61,7 +63,8 @@ pub struct GameBoard {
     pub opponent_collision_step: Option<usize>,
     pub player_score: i32,
     pub opponent_score: i32,
-    pub processed_sequence: Vec<(usize, usize, CellContent, bool, usize)>,
+    pub player_round_ended: bool,
+    pub opponent_round_ended: bool,
 }
 
 #[derive(Debug)]
@@ -102,8 +105,9 @@ impl GameBoard {
             opponent_collision_step: None,
             player_score: 0,
             opponent_score: 0,
-            processed_sequence: Vec::new(),
             squares,
+            player_round_ended: false,
+            opponent_round_ended: false,
         }
     }
 
@@ -288,22 +292,6 @@ impl GameBoard {
     }
 
     pub fn generate_board_svg(&self, player_board: &Board, opponent_board: &Board) -> String {
-
-        let moves: Vec<Move> = self.processed_sequence.iter().map(|(row, col, content, is_opponent, step)| {
-            Move {
-                player: if *is_opponent { "Opponent" } else { "Player" },
-                action: match content {
-                    CellContent::Player => "Move",
-                    CellContent::Trap => "Place Trap",
-                    CellContent::Empty => "Empty",
-                },
-                position: (*row, *col),
-                step: *step,
-            }
-        }).collect();
-        
-        console::log_1(&format!("\n=== Processed Sequence ===\n{:#?}", moves).into());
-
         let mut svg = String::from(r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
                 <rect width="100" height="100" fill="rgb(30, 41, 59)"/>
                 <g transform="translate(5,5)">"#);
@@ -321,40 +309,55 @@ impl GameBoard {
             }
         }
     
-        // Draw pieces and traps for player's board
-        for (row, col, content, is_opponent, current_step) in &self.processed_sequence {
-            let x = *col as f32 * 45.0;
-            let y = *row as f32 * 45.0;
-            
-            match content {
-                CellContent::Player => {
-                    let (color, step) = if *is_opponent {
-                        ("rgb(147, 51, 234)", current_step)  // opponent color
-                    } else {
-                        ("rgb(37, 99, 235)", current_step)   // player color
-                    };
+        // Draw pieces and traps based on squares
+        for i in 0..self.size {
+            for j in 0..self.size {
+                let square = &self.squares[i][j];
+                let x = j as f32 * 45.0;
+                let y = i as f32 * 45.0;
+                
+                // Draw player moves
+                if !square.player_visits.is_empty() {
+                    let step = square.player_visits[0]; // Use first visit for numbering
                     let _ = write!(
                         svg,
-                        r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="{}"/>
+                        r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(37, 99, 235)"/>
                         <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                        x + 20.0, y + 20.0, color, x + 20.0, y + 20.0, step
+                        x + 20.0, y + 20.0, x + 20.0, y + 20.0, step + 1
                     );
-                },
-                CellContent::Trap => {
-                    let stroke_color = if *is_opponent {
-                        "rgb(249, 115, 22)"  // opponent trap color
-                    } else {
-                        "rgb(220, 38, 38)"   // player trap color
-                    };
+                }
+    
+                // Draw opponent moves
+                if !square.opponent_visits.is_empty() {
+                    let step = square.opponent_visits[0]; // Use first visit for numbering
                     let _ = write!(
                         svg,
-                        r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="{}" stroke-width="4"/>"#,
-                        x + 5.0, y + 5.0, stroke_color
+                        r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(147, 51, 234)"/>
+                        <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                        x + 20.0, y + 20.0, x + 20.0, y + 20.0, step + 1
                     );
-                },
-                _ => {},
+                }
+    
+                // Draw player traps
+                if let Some(step) = square.player_trap_step {
+                    let _ = write!(
+                        svg,
+                        r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4"/>"#,
+                        x + 5.0, y + 5.0
+                    );
+                }
+    
+                // Draw opponent traps
+                if let Some(step) = square.opponent_trap_step {
+                    let _ = write!(
+                        svg,
+                        r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>"#,
+                        x + 5.0, y + 5.0
+                    );
+                }
             }
-        }    
+        }
+    
         svg.push_str("</g></svg>");
         format!(r#"data:image/svg+xml,{}"#, urlencoding::encode(&svg))
     }
@@ -363,72 +366,145 @@ impl GameBoard {
         (self.size - 1 - row, self.size - 1 - col)
     }
     
-    fn process_moves(&self, player_board: &Board, opponent_board: &Board, step: usize) -> (MoveType, MoveType) {
-        console::log_1(&format!("\nProcessing step {} of max {} steps", 
-            step + 1, 
-            std::cmp::max(player_board.sequence.len(), opponent_board.sequence.len())
-        ).into());
+    fn process_moves(&mut self) {
+        let max_steps = std::cmp::max(
+            self.player_sequence.len(),
+            self.opponent_sequence.len()
+        );
     
-        let player_move = if step < player_board.sequence.len() {
-            let (row, col, content) = player_board.sequence[step].clone();
-            match content {
-                CellContent::Player => {
-                    if step == player_board.sequence.len() - 1 {
-                        console::log_1(&format!("P1 Step {}: Final move", step + 1).into());
-                        MoveType::Final
-                    } else {
-                        console::log_1(&format!("P1 Step {}: Move to ({}, {})", step + 1, row, col).into());
-                        MoveType::Regular(row, col)
+        console::log_1(&"\n====== Starting Process Moves ======".into());
+        console::log_1(&format!("Processing {} total steps", max_steps).into());
+    
+        'step_loop: for current_step in 0..max_steps {
+            console::log_1(&format!("\n=== Step {} ===", current_step).into());
+    
+            // Find squares where players are at this step
+            let mut player_checking_square = None;
+            let mut opponent_checking_square = None;
+    
+            // Search through all squares to find player positions for this step
+            for row in &mut self.squares {
+                for square in row {
+                    if square.player_visits.contains(&current_step) {
+                        player_checking_square = square.position;
+                        console::log_1(&format!("Found player at position: {:?}", square.position).into());
                     }
-                },
-                CellContent::Trap => {
-                    console::log_1(&format!("P1 Step {}: Place trap at ({}, {})", step + 1, row, col).into());
-                    MoveType::Trap(row, col)
-                },
-                _ => {
-                    console::log_1(&format!("P1 Step {}: No move", step + 1).into());
-                    MoveType::None
-                },
-            }
-        } else {
-            console::log_1(&format!("P1 Step {}: No more moves in sequence", step + 1).into());
-            MoveType::None
-        };
-    
-        let opponent_move = if step < opponent_board.sequence.len() {
-            let (row, col, content) = opponent_board.sequence[step].clone();
-            let (rot_row, rot_col) = self.rotate_position(row, col);
-            match content {
-                CellContent::Player => {
-                    if step == opponent_board.sequence.len() - 1 {
-                        console::log_1(&format!("P2 Step {}: Final move", step + 1).into());
-                        MoveType::Final
-                    } else {
-                        console::log_1(&format!("P2 Step {}: Move to ({}, {}) (rotated from ({}, {}))", 
-                            step + 1, rot_row, rot_col, row, col).into());
-                        MoveType::Regular(rot_row, rot_col)
+                    if square.opponent_visits.contains(&current_step) {
+                        opponent_checking_square = square.position;
+                        console::log_1(&format!("Found opponent at position: {:?}", square.position).into());
                     }
-                },
-                CellContent::Trap => {
-                    console::log_1(&format!("P2 Step {}: Place trap at ({}, {}) (rotated from ({}, {}))", 
-                        step + 1, rot_row, rot_col, row, col).into());
-                    MoveType::Trap(rot_row, rot_col)
-                },
-                _ => {
-                    console::log_1(&format!("P2 Step {}: No move", step + 1).into());
-                    MoveType::None
-                },
+                }
             }
-        } else {
-            console::log_1(&format!("P2 Step {}: No more moves in sequence", step + 1).into());
-            MoveType::None
-        };
     
-        (player_move, opponent_move)
+            // Check for collisions
+            if let (Some(p_pos), Some(o_pos)) = (player_checking_square, opponent_checking_square) {
+                if p_pos == o_pos {
+                    console::log_1(&format!("COLLISION detected at position {:?} on step {}", p_pos, current_step).into());
+                    // Update collision in the square where they collided
+                    if let Some(square) = self.squares.get_mut(p_pos.0).and_then(|row| row.get_mut(p_pos.1)) {
+                        square.collision_step = Some(current_step);
+                    }
+                    break 'step_loop;
+                }
+            }
+    
+            // Process player movement and traps
+            if !self.player_round_ended {
+                if let Some((row, col)) = player_checking_square {
+                    let square = &mut self.squares[row][col];
+                    
+                    console::log_1(&format!("Checking player at ({}, {})", row, col).into());
+                    
+                    // Check if player hit opponent trap
+                    if let Some(trap_step) = square.opponent_trap_step {
+                        if trap_step < self.opponent_collision_step.unwrap_or(usize::MAX) && 
+                           trap_step <= current_step {
+                            console::log_1(&format!("Player hit opponent trap at ({}, {}) from step {}", row, col, trap_step).into());
+                            square.player_trap_hit_step = Some(current_step);
+                            self.player_collision_step = Some(current_step);
+                        }
+                    } else if let Some((prev_row, _)) = self.player_position {
+                        // Check for forward movement
+                        if prev_row > row {
+                            console::log_1(&format!("Player moved forward from row {} to {}", prev_row, row).into());
+                            square.player_forward_move = true;
+                            self.player_score += 1;
+                            console::log_1(&format!("Player score increased to {}", self.player_score).into());
+                            self.player_position = Some((row, col));
+                        } else {
+                            console::log_1(&"Player moved but not forward".into());
+                        }
+                    }
+                }
+            }
+    
+            // Process opponent movement and traps
+            if !self.opponent_round_ended {
+                if let Some((row, col)) = opponent_checking_square {
+                    let square = &mut self.squares[row][col];
+                    
+                    console::log_1(&format!("Checking opponent at ({}, {})", row, col).into());
+                    
+                    // Check if opponent hit player trap
+                    if let Some(trap_step) = square.player_trap_step {
+                        if trap_step < self.player_collision_step.unwrap_or(usize::MAX) && 
+                           trap_step <= current_step {
+                            console::log_1(&format!("Opponent hit player trap at ({}, {}) from step {}", row, col, trap_step).into());
+                            square.opponent_trap_hit_step = Some(current_step);
+                            self.opponent_collision_step = Some(current_step);
+                        }
+                    } else if let Some((prev_row, _)) = self.opponent_position {
+                        // Check for forward movement
+                        if prev_row < row {
+                            console::log_1(&format!("Opponent moved forward from row {} to {}", prev_row, row).into());
+                            square.opponent_forward_move = true;
+                            self.opponent_score += 1;
+                            console::log_1(&format!("Opponent score increased to {}", self.opponent_score).into());
+                            self.opponent_position = Some((row, col));
+                        } else {
+                            console::log_1(&"Opponent moved but not forward".into());
+                        }
+                    }
+                }
+            }
+    
+            // Print square states after each step
+            if current_step % 2 == 0 {  // Print every other step to reduce noise
+                console::log_1(&"\n--- Square States ---".into());
+                for row in &self.squares {
+                    for square in row {
+                        if let Some((r, c)) = square.position {
+                            if !square.player_visits.is_empty() || 
+                               !square.opponent_visits.is_empty() ||
+                               square.player_trap_step.is_some() ||
+                               square.opponent_trap_step.is_some() {
+                                console::log_1(&format!("\nSquare ({}, {}): {:#?}", r, c, square).into());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    
+        console::log_1(&"\n====== Process Moves Complete ======".into());
+        console::log_1(&format!("Final player score: {}", self.player_score).into());
+        console::log_1(&format!("Final opponent score: {}", self.opponent_score).into());
     }
-
+    
     pub fn process_turn(&mut self, player_board: &Board, opponent_board: &Board) {
         console::log_1(&"\n====== Starting New Game Round ======".into());
+
+        // Reset game state
+        self.player_round_ended = false;
+        self.opponent_round_ended = false;
+        self.player_position = None;
+        self.opponent_position = None;
+        self.player_collision_step = None;
+        self.opponent_collision_step = None;
+        
+        // Reset sequences
+        self.player_sequence = player_board.sequence.clone();
+        self.opponent_sequence = opponent_board.sequence.clone();
         
         // Debug: Print full sequences
         console::log_1(&"\nPlayer 1 sequence:".into());
@@ -477,10 +553,14 @@ impl GameBoard {
         console::log_1(&"\n=== Square States ===".into());
         for row in &self.squares {
             for square in row {
-                console::log_1(&format!("\nSquare ({}, {}): {:#?}", square.row, square.col, square).into());
+                if let Some((row,col)) = square.position {
+                    console::log_1(&format!("\nSquare ({}, {}): {:#?}", row, col, square).into());
+                }
             }
         }
     
+        self.process_moves();
+
         console::log_1(&"\n====== Round Summary ======".into());
         console::log_1(&format!("Final player score: {}", self.player_score).into());
         console::log_1(&format!("Final opponent score: {}", self.opponent_score).into());
