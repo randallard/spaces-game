@@ -12,6 +12,7 @@ pub enum CellContent {
     Empty,
     Player,
     Trap,
+    Final,
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
@@ -90,7 +91,7 @@ pub fn BoardCreator(
                 // Modified this condition to allow final move after placing trap
                 if row == usize::MAX || is_adjacent(player_row, player_col, row, col) {
                     if row == usize::MAX {  // Final move logic
-                        current_board.sequence.push((0, player_col, CellContent::Player));
+                        current_board.sequence.push((0, player_col, CellContent::Final));
                         current_board.grid[player_row][player_col] = CellContent::Empty;
                         board.set(current_board.clone());  // Clone here before it's moved
                         
@@ -202,6 +203,7 @@ pub fn BoardCreator(
                                                         >"Trap"</button>
                                                     </div>
                                                 }.into_any(),
+                                                    CellContent::Final => view! { <span>" "</span> }.into_any(),
                                                     CellContent::Empty => view! { <span>" "</span> }.into_any(),
                                                     CellContent::Player => view! { <span>"○"</span> }.into_any(),
                                                     CellContent::Trap => view! { <span>"×"</span> }.into_any(),

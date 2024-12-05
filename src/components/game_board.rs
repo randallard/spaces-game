@@ -148,8 +148,8 @@ impl GameBoard {
                         svg,
                         r#"<text x="{}" y="{}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>
                            <text x="{}" y="{}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                        center_x - radius/2.0, center_y, *player_step,
-                        center_x + radius/2.0, center_y, *opponent_step 
+                        center_x - radius/2.0, center_y, *player_step  + 1,
+                        center_x + radius/2.0, center_y, *opponent_step + 1 
                     );
                 } else {
                     // Draw single player circle if only player visited
@@ -159,7 +159,7 @@ impl GameBoard {
                             svg,
                             r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(37, 99, 235)"/>
                             <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                            x + 20.0, y + 20.0, x + 20.0, y + 20.0, *step
+                            x + 20.0, y + 20.0, x + 20.0, y + 20.0, *step + 1
                         );
                     }
                     
@@ -170,7 +170,7 @@ impl GameBoard {
                             svg,
                             r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(147, 51, 234)"/>
                             <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                            x + 20.0, y + 20.0, x + 20.0, y + 20.0, *step
+                            x + 20.0, y + 20.0, x + 20.0, y + 20.0, *step + 1
                         );
                     }
                 }                
@@ -355,6 +355,7 @@ impl GameBoard {
                 CellContent::Player => "Player",
                 CellContent::Trap => "Trap",
                 CellContent::Empty => "Empty",
+                CellContent::Final => "Final",
             };
             console::log_1(&format!("Step {}: ({}, {}) - {}", i + 1, row, col, content_str).into());
 
@@ -376,6 +377,7 @@ impl GameBoard {
                 CellContent::Player => "Player",
                 CellContent::Trap => "Trap",
                 CellContent::Empty => "Empty",
+                CellContent::Final => "Final",
             };
             console::log_1(&format!("Step {}: ({}, {}) - {}", i + 1, row, col, content_str).into());
 
