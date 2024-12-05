@@ -34,7 +34,7 @@ impl Square {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct GameBoard {
     squares: Vec<Vec<Square>>,
     pub size: usize,
@@ -48,6 +48,8 @@ pub struct GameBoard {
     pub opponent_score: i32,
     pub player_round_ended: bool,
     pub opponent_round_ended: bool,
+    pub player_goal_reached: bool,
+    pub opponent_goal_reached: bool,
 }
     
 impl GameBoard {
@@ -73,6 +75,8 @@ impl GameBoard {
             squares,
             player_round_ended: false,
             opponent_round_ended: false,
+            player_goal_reached: false,
+            opponent_goal_reached: false,
         }
     }
 
@@ -213,12 +217,21 @@ impl GameBoard {
             self.player_sequence.len(),
             self.opponent_sequence.len()
         );
+        let player_goal_step = self.player_sequence.len();
+        let opponent_goal_step = self.opponent_sequence.len();
     
         console::log_1(&"\n====== Starting Process Moves ======".into());
         console::log_1(&format!("Processing {} total steps", max_steps).into());
     
         'step_loop: for current_step in 0..max_steps {
             console::log_1(&format!("\n=== Step {} ===", current_step).into());
+
+            if player_goal_step == current_step {
+                console::log_1(&format!("Player SHOULDA'D Goal at {}", current_step).into());  
+            }
+            if opponent_goal_step == current_step {
+                console::log_1(&format!("Opponent SHOULDA'D Goal at {}", current_step).into());  
+            }
     
             // Find squares where players are at this step
             let mut player_checking_square = None;
@@ -236,6 +249,15 @@ impl GameBoard {
                         console::log_1(&format!("Found opponent at position: {:?}", square.position).into());
                     }
                 }
+            }
+
+            if self.player_collision_step.is_none() && player_checking_square.is_none() {
+                console::log_1(&format!("Player Goal Reached at {}", current_step).into());                    
+                self.player_goal_reached = true;
+            }  
+            if self.opponent_collision_step.is_none() && opponent_checking_square.is_none() {
+                console::log_1(&format!("Opponent Goal Reached at {}", current_step).into());
+                self.opponent_goal_reached = true;
             }
     
             // Check for collisions
@@ -326,11 +348,25 @@ impl GameBoard {
                     }
                 }
             }
+            
+            if self.player_goal_reached || self.opponent_goal_reached {
+                break;
+            }
+        }        
+
+        if self.player_goal_reached {
+            self.player_score += 1
+        }  
+        if self.opponent_goal_reached {
+            self.opponent_score += 1
         }
     
         console::log_1(&"\n====== Process Moves Complete ======".into());
         console::log_1(&format!("Final player score: {}", self.player_score).into());
         console::log_1(&format!("Final opponent score: {}", self.opponent_score).into());
+
+        console::log_1(&"\n====== Final GameBoard State ======".into());
+        console::log_1(&format!("{:#?}", self).into()); 
     }
     
     pub fn process_turn(&mut self, player_board: &Board, opponent_board: &Board) {
