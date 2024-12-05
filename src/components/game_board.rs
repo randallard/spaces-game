@@ -274,7 +274,7 @@ impl GameBoard {
                             console::log_1(&format!("Player score increased to {}", self.player_score).into());
                             self.player_position = Some((row, col));
                         } else {
-                            console::log_1(&"Player moved but not forward".into());
+                            console::log_1(&format!("Player moved but not forward row {} - prev_row {}",row,prev_row).into());
                         }
                     }
                 }
@@ -304,7 +304,7 @@ impl GameBoard {
                             console::log_1(&format!("Opponent score increased to {}", self.opponent_score).into());
                             self.opponent_position = Some((row, col));
                         } else {
-                            console::log_1(&"Opponent moved but not forward".into());
+                            console::log_1(&format!("Opponent moved but not forward row {} - prev_row {}",row,prev_row).into());
                         }
                     }
                 }
@@ -363,6 +363,9 @@ impl GameBoard {
             match content {
                 CellContent::Player => {
                     self.squares[row][col].player_visits.push(i);
+                    if i == 0 {
+                        self.player_position = Some((row, col)); 
+                    }
                 },
                 CellContent::Trap => {
                     self.squares[row][col].player_trap_step = Some(i);
@@ -386,6 +389,9 @@ impl GameBoard {
             match content {
                 CellContent::Player => {
                     self.squares[rot_row][rot_col].opponent_visits.push(i);
+                    if i == 0 {
+                        self.opponent_position = Some((rot_row, rot_col)); 
+                    }
                 },
                 CellContent::Trap => {
                     self.squares[rot_row][rot_col].opponent_trap_step = Some(i);
