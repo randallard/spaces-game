@@ -134,32 +134,30 @@ impl GameBoard {
                 }
                 
                 if has_player && has_opponent {
-                    // Draw opponent half-circle (right half)
-                    let _ = write!(
-                        svg,
-                        r#"<path d="M{} {} A15 15 0 0 0 {} {} L {} {} L {} {} Z" fill="rgb(147, 51, 234)"/>"#,
-                        x + 20.0,    // M x (center top)
-                        y + 5.0,     // M y
-                        x + 35.0,    // A end x (right middle)
-                        y + 20.0,    // A end y
-                        x + 20.0,    // L x (center bottom)
-                        y + 35.0,    // L y
-                        x + 20.0,    // L x (center top, closing)
-                        y + 5.0      // L y
-                    );
                     // Draw player half-circle (left half)
                     let _ = write!(
                         svg,
-                        r#"<path d="M{} {} A15 15 0 0 1 {} {} L {} {} L {} {} Z" fill="rgb(37, 99, 235)"/>"#,
-                        x + 20.0,    // M x (center top)
-                        y + 5.0,     // M y
-                        x + 5.0,     // A end x (left middle)
-                        y + 20.0,    // A end y
-                        x + 20.0,    // L x (center bottom)
-                        y + 35.0,    // L y
-                        x + 20.0,    // L x (center top, closing)
-                        y + 5.0      // L y
+                        r#"<path d="M{} {} A15 15 0 0 0 {} {} L {} {} Z" fill="rgb(37, 99, 235)"/>"#,
+                        x + 20.0,    // M x (center)
+                        y + 5.0,     // M y (top)
+                        x + 5.0,     // A end x (left)
+                        y + 20.0,    // A end y (middle)
+                        x + 20.0,    // L x (back to center)
+                        y + 35.0     // L y (bottom)
                     );
+
+                    // Draw opponent half-circle (right half)
+                    let _ = write!(
+                        svg,
+                        r#"<path d="M{} {} A15 15 0 0 1 {} {} L {} {} Z" fill="rgb(147, 51, 234)"/>"#,
+                        x + 20.0,    // M x (center)
+                        y + 5.0,     // M y (top)
+                        x + 35.0,    // A end x (right)
+                        y + 20.0,    // A end y (middle)
+                        x + 20.0,    // L x (back to center)
+                        y + 35.0     // L y (bottom)
+                    );  
+
                     // Add player number (in left half)
                     let player_step = player_visits.iter().max().unwrap();
                     let _ = write!(
