@@ -134,44 +134,43 @@ impl GameBoard {
                 }
                 
                 if has_player && has_opponent {
-                    // Draw player half-circle (left half)
+                    let center_x = x + 20.0;
+                    let center_y = y + 20.0;
+                    let radius = 15.0;
+                    let vertical_offset = -15.0;  // Move everything up
+                
+                    // Blue half circle (left)
                     let _ = write!(
                         svg,
-                        r#"<path d="M{} {} A15 15 0 0 0 {} {} L {} {} Z" fill="rgb(37, 99, 235)"/>"#,
-                        x + 20.0,    // M x (center)
-                        y + 5.0,     // M y (top)
-                        x + 5.0,     // A end x (left)
-                        y + 20.0,    // A end y (middle)
-                        x + 20.0,    // L x (back to center)
-                        y + 35.0     // L y (bottom)
+                        r#"<path d="M {},{} a {},{} 0 0 1 {},0 v {} a {},{} 0 0 1 -{},0" fill="rgb(37, 99, 235)"/>"#,
+                        center_x - radius, center_y + vertical_offset,
+                        radius, radius, 
+                        radius, radius * 2.0,
+                        radius, radius,
+                        radius
                     );
-
-                    // Draw opponent half-circle (right half)
+                
+                    // Purple half circle (right)
                     let _ = write!(
                         svg,
-                        r#"<path d="M{} {} A15 15 0 0 1 {} {} L {} {} Z" fill="rgb(147, 51, 234)"/>"#,
-                        x + 20.0,    // M x (center)
-                        y + 5.0,     // M y (top)
-                        x + 35.0,    // A end x (right)
-                        y + 20.0,    // A end y (middle)
-                        x + 20.0,    // L x (back to center)
-                        y + 35.0     // L y (bottom)
-                    );  
-
-                    // Add player number (in left half)
+                        r#"<path d="M {},{} a {},{} 0 0 0 -{},0 v {} a {},{} 0 0 0 {},0" fill="rgb(147, 51, 234)"/>"#,
+                        center_x + radius, center_y + vertical_offset,
+                        radius, radius,
+                        radius, radius * 2.0,
+                        radius, radius,
+                        radius
+                    );
+                
+                    // Numbers
                     let player_step = player_visits.iter().max().unwrap();
-                    let _ = write!(
-                        svg,
-                        r#"<text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                        x + 12.0, y + 20.0, *player_step + 1
-                    );
-                    
-                    // Add opponent number (in right half)
                     let opponent_step = opponent_visits.iter().max().unwrap();
+                    
                     let _ = write!(
                         svg,
-                        r#"<text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                        x + 28.0, y + 20.0, *opponent_step + 1
+                        r#"<text x="{}" y="{}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>
+                           <text x="{}" y="{}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                        center_x - radius/2.0, center_y, *player_step + 1,
+                        center_x + radius/2.0, center_y, *opponent_step + 1
                     );
                 } else {
                     // Draw single player circle if only player visited
