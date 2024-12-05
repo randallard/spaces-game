@@ -1,7 +1,6 @@
 use leptos::*;
 use leptos::prelude::*;
 use leptos::callback::Callback;
-use web_sys::console;
 use crate::components::opponent::OpponentType;
 use crate::components::utils::{generate_thumbnail, generate_opponent_thumbnail};
 
@@ -219,7 +218,6 @@ pub fn Game(
                 
                             // Game board view
                             <div class="text-center">
-                                <h3 class="text-xl font-bold mb-2">"Game Progress"</h3>
                                 {move || {
                                     let state = game_state.get();
                                     if let (Some(board1), Some(board2)) = (&state.player1_board, &state.player2_board) {
@@ -232,36 +230,17 @@ pub fn Game(
                                             let mut current_state = state.clone();
                                             current_state.player1_score += game_board.player_score;
                                             current_state.player2_score += game_board.opponent_score;
-                                            
-                                            web_sys::console::log_1(&format!("Player score: {}", game_board.player_score).into());
-                                            web_sys::console::log_1(&format!("Opponent score: {}", game_board.opponent_score).into());
-        
                                             current_state.game_board = Some(game_board);
                                             game_state.set(current_state);
                                         }
                                         if let Some(game_board) = &state.game_board {
                                             view! {
                                                 <div class="flex flex-col items-center gap-2">
-                                                {
-                                                    // Debug logging for player
-                                                    console::log_1(&format!("Player position: {:?}", game_board.player_position).into());
-                                                    console::log_1(&format!("Board size: {}", game_board.size).into());
-                                                    
-                                
-                                                }
-                                                
                                                 <img 
-                                                    src=game_board.generate_board_svg(&board1.board, &board2.board)
+                                                    src=game_board.generate_board_svg()
                                                     alt="Game board" 
                                                     class="w-96 h-96 rounded border border-slate-700"
                                                 />
-                                                
-                                                {
-                                                    // Debug logging for opponent
-                                                    console::log_1(&format!("Opponent position: {:?}", game_board.opponent_position).into());
-                                                    
-
-                                                }
                                             </div>
                                             }.into_any()
                                         } else {

@@ -1,16 +1,7 @@
-use std::{fmt::Write, thread::current};
+use std::fmt::Write;
 use crate::components::board::{Board, CellContent};
 
 use web_sys::console;
-
-// just for debugging
-#[derive(Debug)]
-struct Move {
-    player: &'static str,
-    action: &'static str,
-    position: (usize, usize),
-    step: usize,
-}
 
 #[derive(Debug, Clone)]
 struct Square {
@@ -43,17 +34,9 @@ impl Square {
     }
 }
 
-#[derive(Clone, Debug)]
-enum MoveType {
-    Regular(usize, usize),  // row, col
-    Trap(usize, usize),     // row, col
-    Final,
-    None,
-}
-
 #[derive(Clone)]
 pub struct GameBoard {
-    pub squares: Vec<Vec<Square>>,
+    squares: Vec<Vec<Square>>,
     pub size: usize,
     pub player_sequence: Vec<(usize, usize, CellContent)>,
     pub opponent_sequence: Vec<(usize, usize, CellContent)>,
@@ -66,25 +49,7 @@ pub struct GameBoard {
     pub player_round_ended: bool,
     pub opponent_round_ended: bool,
 }
-
-#[derive(Debug)]
-struct MoveResult {
-    new_position: Option<(usize, usize)>,
-    trap_placed: Option<(usize, usize)>,
-    points_earned: i32,
-    is_first_step: bool,
-    moving_forward: bool,
-    goal_reached: bool,
-}
     
-#[derive(Debug)]
-enum TrapResult {
-    NoTraps,
-    Player1Hit,
-    Player2Hit,
-    BothHit,
-}
-
 impl GameBoard {
     pub fn new(size: usize) -> Self {
         let mut squares = Vec::with_capacity(size);
@@ -111,187 +76,7 @@ impl GameBoard {
         }
     }
 
-    fn check_collisions(&self, p1_result: &MoveResult, p2_result: &MoveResult) -> bool {
-        console::log_1(&"\n=== Checking Collisions ===".into());
-    
-        // Check for direct piece collisions (according to flowchart node D)
-        if let (Some(p1_pos), Some(p2_pos)) = (p1_result.new_position, p2_result.new_position) {
-            if p1_pos == p2_pos {
-                console::log_1(&format!("Players collide at position {:?}", p1_pos).into());
-                return true;
-            }
-        }
-    
-        // Check trap collisions (moved from old check_traps function)
-        if let Some(p1_trap) = p1_result.trap_placed {
-            if let Some(p2_pos) = p2_result.new_position {
-                if p1_trap == p2_pos {
-                    console::log_1(&"Player 2 collides with new Player 1 trap".into());
-                    return true;
-                }
-            }
-        }
-    
-        if let Some(p2_trap) = p2_result.trap_placed {
-            if let Some(p1_pos) = p1_result.new_position {
-                if p2_trap == p1_pos {
-                    console::log_1(&"Player 1 collides with new Player 2 trap".into());
-                    return true;
-                }
-            }
-        }
-    
-        false
-    }
-    
-    fn check_traps(
-        &self,
-        p1_result: &MoveResult,
-        p2_result: &MoveResult,
-        player_board: &Board,
-        opponent_board: &Board,
-        current_step: usize  // Add current_step parameter
-    ) -> TrapResult {
-        console::log_1(&"\n=== Checking Existing Traps ===".into());
-        
-        let mut p1_hit = false;
-        let mut p2_hit = false;
-    
-        // Check if player 1 hit any existing opponent traps (only from previous steps)
-        if let Some(p1_pos) = p1_result.new_position {
-            let (row, col) = p1_pos;
-            let (rot_row, rot_col) = self.rotate_position(row, col);
-            
-            // Only consider traps placed in previous steps
-            for (step, &(trap_row, trap_col, ref content)) in opponent_board.sequence.iter().enumerate() {
-                if step > current_step {
-                    break; // Don't check future traps
-                }
-                if *content == CellContent::Trap && (trap_row, trap_col) == (rot_row, rot_col) {
-                    p1_hit = true;
-                    break;
-                }
-            }
-        }
-    
-        // Check if player 2 hit any existing player traps (only from previous steps)
-        if let Some(p2_pos) = p2_result.new_position {
-            let (row, col) = p2_pos;
-            
-            // Only consider traps placed in previous steps
-            for (step, &(trap_row, trap_col, ref content)) in player_board.sequence.iter().enumerate() {
-                if step > current_step {
-                    break; // Don't check future traps
-                }
-                if *content == CellContent::Trap && (trap_row, trap_col) == (row, col) {
-                    console::log_1(&format!("Player 2 hit existing trap at {:?}", p2_pos).into());
-                    p2_hit = true;
-                    break;
-                }
-            }
-        }
-    
-        match (p1_hit, p2_hit) {
-            (true, true) => TrapResult::BothHit,
-            (true, false) => TrapResult::Player1Hit,
-            (false, true) => TrapResult::Player2Hit,
-            (false, false) => TrapResult::NoTraps,
-        }
-    }
-
-    fn handle_moves(&self, player_move: MoveType, opponent_move: MoveType, step: usize) -> (MoveResult, MoveResult) {
-        console::log_1(&format!("\n=== Handling Moves for Step {} ===", step + 1).into());
-    
-        let player_result = match player_move {
-            MoveType::Final => MoveResult {
-                new_position: None,
-                trap_placed: None,
-                points_earned: 1,
-                is_first_step: step == 0,
-                moving_forward: true,
-                goal_reached: true,
-            },
-            MoveType::Regular(row, col) => {
-                let moving_forward = if let Some((prev_row, _)) = self.player_position {
-                    row < prev_row
-                } else {
-                    false
-                };
-        
-                MoveResult {
-                    new_position: Some((row, col)),
-                    trap_placed: None,
-                    points_earned: if moving_forward { 1 } else { 0 },
-                    is_first_step: step == 0,
-                    moving_forward,
-                    goal_reached: false,
-                }
-            },
-            MoveType::Trap(row, col) => MoveResult {
-                new_position: self.player_position,
-                trap_placed: Some((row, col)),
-                points_earned: 0,
-                is_first_step: step == 0,
-                moving_forward: false,
-                goal_reached: false,
-            },
-            MoveType::None => MoveResult {
-                new_position: self.player_position,
-                trap_placed: None,
-                points_earned: 0,
-                is_first_step: step == 0,
-                moving_forward: false,
-                goal_reached: false,
-            },
-        };
-    
-        let opponent_result = match opponent_move {
-            MoveType::Final => MoveResult {
-                new_position: None,
-                trap_placed: None,
-                points_earned: 1,
-                is_first_step: step == 0,
-                moving_forward: true,
-                goal_reached: true,
-            },
-            MoveType::Regular(row, col) => {
-                let moving_forward = if let Some((prev_row, _)) = self.opponent_position {
-                    row > prev_row
-                } else {
-                    false
-                };
-        
-                MoveResult {
-                    new_position: Some((row, col)),
-                    trap_placed: None,
-                    points_earned: if moving_forward { 1 } else { 0 },
-                    is_first_step: step == 0,
-                    moving_forward,
-                    goal_reached: false,
-                }
-            },
-            MoveType::Trap(row, col) => MoveResult {
-                new_position: self.opponent_position,
-                trap_placed: Some((row, col)),
-                points_earned: 0,
-                is_first_step: step == 0,
-                moving_forward: false,
-                goal_reached: false,
-            },
-            MoveType::None => MoveResult {
-                new_position: self.opponent_position,
-                trap_placed: None,
-                points_earned: 0,
-                is_first_step: step == 0,
-                moving_forward: false,
-                goal_reached: false,
-            },
-        };
-
-        (player_result, opponent_result)
-    }
-
-    pub fn generate_board_svg(&self, player_board: &Board, opponent_board: &Board) -> String {
+    pub fn generate_board_svg(&self) -> String {
         let mut svg = String::from(r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
                 <rect width="100" height="100" fill="rgb(30, 41, 59)"/>
                 <g transform="translate(5,5)">"#);
@@ -316,48 +101,106 @@ impl GameBoard {
                 let x = j as f32 * 45.0;
                 let y = i as f32 * 45.0;
                 
-                // Draw player moves
-                if !square.player_visits.is_empty() {
-                    let step = square.player_visits[0]; // Use first visit for numbering
-                    let _ = write!(
-                        svg,
-                        r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(37, 99, 235)"/>
-                        <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                        x + 20.0, y + 20.0, x + 20.0, y + 20.0, step + 1
-                    );
+                // Get valid visits (before collision)
+                let player_visits: Vec<&usize> = square.player_visits.iter()
+                    .filter(|&&step| step <= self.player_collision_step.unwrap_or(usize::MAX))
+                    .collect();
+                let opponent_visits: Vec<&usize> = square.opponent_visits.iter()
+                    .filter(|&&step| step <= self.opponent_collision_step.unwrap_or(usize::MAX))
+                    .collect();
+                
+                let has_player = !player_visits.is_empty();
+                let has_opponent = !opponent_visits.is_empty();
+                
+                // Draw traps only if they were set before collision
+                if let Some(trap_step) = square.player_trap_step {
+                    if trap_step <= self.player_collision_step.unwrap_or(usize::MAX) {
+                        let _ = write!(
+                            svg,
+                            r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4"/>"#,
+                            x + 5.0, y + 5.0
+                        );
+                    }
                 }
-    
-                // Draw opponent moves
-                if !square.opponent_visits.is_empty() {
-                    let step = square.opponent_visits[0]; // Use first visit for numbering
-                    let _ = write!(
-                        svg,
-                        r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(147, 51, 234)"/>
-                        <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                        x + 20.0, y + 20.0, x + 20.0, y + 20.0, step + 1
-                    );
+
+                if let Some(trap_step) = square.opponent_trap_step {
+                    if trap_step <= self.opponent_collision_step.unwrap_or(usize::MAX) {
+                        let _ = write!(
+                            svg,
+                            r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>"#,
+                            x + 5.0, y + 5.0
+                        );
+                    }
                 }
-    
-                // Draw player traps
-                if let Some(step) = square.player_trap_step {
+                
+                if has_player && has_opponent {
+                    // Draw opponent half-circle (right half)
                     let _ = write!(
                         svg,
-                        r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4"/>"#,
-                        x + 5.0, y + 5.0
+                        r#"<path d="M{} {} A15 15 0 0 0 {} {} L {} {} L {} {} Z" fill="rgb(147, 51, 234)"/>"#,
+                        x + 20.0,    // M x (center top)
+                        y + 5.0,     // M y
+                        x + 35.0,    // A end x (right middle)
+                        y + 20.0,    // A end y
+                        x + 20.0,    // L x (center bottom)
+                        y + 35.0,    // L y
+                        x + 20.0,    // L x (center top, closing)
+                        y + 5.0      // L y
                     );
-                }
-    
-                // Draw opponent traps
-                if let Some(step) = square.opponent_trap_step {
+                    // Draw player half-circle (left half)
                     let _ = write!(
                         svg,
-                        r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>"#,
-                        x + 5.0, y + 5.0
+                        r#"<path d="M{} {} A15 15 0 0 1 {} {} L {} {} L {} {} Z" fill="rgb(37, 99, 235)"/>"#,
+                        x + 20.0,    // M x (center top)
+                        y + 5.0,     // M y
+                        x + 5.0,     // A end x (left middle)
+                        y + 20.0,    // A end y
+                        x + 20.0,    // L x (center bottom)
+                        y + 35.0,    // L y
+                        x + 20.0,    // L x (center top, closing)
+                        y + 5.0      // L y
                     );
+                    // Add player number (in left half)
+                    let player_step = player_visits.iter().max().unwrap();
+                    let _ = write!(
+                        svg,
+                        r#"<text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                        x + 12.0, y + 20.0, *player_step + 1
+                    );
+                    
+                    // Add opponent number (in right half)
+                    let opponent_step = opponent_visits.iter().max().unwrap();
+                    let _ = write!(
+                        svg,
+                        r#"<text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                        x + 28.0, y + 20.0, *opponent_step + 1
+                    );
+                } else {
+                    // Draw single player circle if only player visited
+                    if has_player {
+                        let step = player_visits.iter().max().unwrap();
+                        let _ = write!(
+                            svg,
+                            r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(37, 99, 235)"/>
+                            <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                            x + 20.0, y + 20.0, x + 20.0, y + 20.0, *step + 1
+                        );
+                    }
+                    
+                    // Draw single opponent circle if only opponent visited
+                    if has_opponent {
+                        let step = opponent_visits.iter().max().unwrap();
+                        let _ = write!(
+                            svg,
+                            r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(147, 51, 234)"/>
+                            <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                            x + 20.0, y + 20.0, x + 20.0, y + 20.0, *step + 1
+                        );
+                    }
                 }
             }
         }
-    
+
         svg.push_str("</g></svg>");
         format!(r#"data:image/svg+xml,{}"#, urlencoding::encode(&svg))
     }
