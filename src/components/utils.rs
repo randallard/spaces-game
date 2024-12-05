@@ -46,8 +46,9 @@ pub fn generate_opponent_thumbnail(board: &Board) -> String {
             CellContent::Trap => {
                 let _ = write!(
                     svg,
-                    r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>"#,
-                    x + 5.0, y + 5.0
+                    r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>"
+                            <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                    x + 5.0, y + 5.0, x + 10.0, y + 10.0, idx + 1
                 );
             },
             _ => {}
@@ -98,8 +99,9 @@ pub fn generate_thumbnail(board: &Board) -> String {
             CellContent::Trap => {
                 let _ = write!(
                     svg,
-                    r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4"/>"#,
-                    x + 5.0, y + 5.0
+                    r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4"/>"
+                            <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                    x + 5.0, y + 5.0, x + 10.0, y + 10.0, idx + 1
                 );
             },
             _ => {},

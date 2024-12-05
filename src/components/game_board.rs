@@ -112,27 +112,6 @@ impl GameBoard {
                 let has_player = !player_visits.is_empty();
                 let has_opponent = !opponent_visits.is_empty();
                 
-                // Draw traps only if they were set before collision
-                if let Some(trap_step) = square.player_trap_step {
-                    if trap_step <= self.player_collision_step.unwrap_or(usize::MAX) {
-                        let _ = write!(
-                            svg,
-                            r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4"/>"#,
-                            x + 5.0, y + 5.0
-                        );
-                    }
-                }
-
-                if let Some(trap_step) = square.opponent_trap_step {
-                    if trap_step <= self.opponent_collision_step.unwrap_or(usize::MAX) {
-                        let _ = write!(
-                            svg,
-                            r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>"#,
-                            x + 5.0, y + 5.0
-                        );
-                    }
-                }
-                
                 if has_player && has_opponent {
                     let center_x = x + 20.0;
                     let center_y = y + 20.0;
@@ -169,8 +148,8 @@ impl GameBoard {
                         svg,
                         r#"<text x="{}" y="{}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>
                            <text x="{}" y="{}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                        center_x - radius/2.0, center_y, *player_step + 1,
-                        center_x + radius/2.0, center_y, *opponent_step + 1
+                        center_x - radius/2.0, center_y, *player_step,
+                        center_x + radius/2.0, center_y, *opponent_step 
                     );
                 } else {
                     // Draw single player circle if only player visited
@@ -180,7 +159,7 @@ impl GameBoard {
                             svg,
                             r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(37, 99, 235)"/>
                             <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                            x + 20.0, y + 20.0, x + 20.0, y + 20.0, *step + 1
+                            x + 20.0, y + 20.0, x + 20.0, y + 20.0, *step
                         );
                     }
                     
@@ -191,7 +170,30 @@ impl GameBoard {
                             svg,
                             r#"<circle cx="{:.0}" cy="{:.0}" r="15" fill="rgb(147, 51, 234)"/>
                             <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                            x + 20.0, y + 20.0, x + 20.0, y + 20.0, *step + 1
+                            x + 20.0, y + 20.0, x + 20.0, y + 20.0, *step
+                        );
+                    }
+                }                
+                
+                // Draw traps only if they were set before collision
+                if let Some(trap_step) = square.player_trap_step {
+                    if trap_step <= self.player_collision_step.unwrap_or(usize::MAX) {
+                        let _ = write!(
+                            svg,
+                            r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4"/>"
+                            <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                            x + 5.0, y + 5.0, x + 30.0, y + 30.0, trap_step + 1
+                        );
+                    }
+                }
+
+                if let Some(trap_step) = square.opponent_trap_step {
+                    if trap_step <= self.opponent_collision_step.unwrap_or(usize::MAX) {
+                        let _ = write!(
+                            svg,
+                            r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>"
+                            <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
+                            x + 5.0, y + 5.0, x + 30.0, y + 30.0, trap_step + 1
                         );
                     }
                 }
