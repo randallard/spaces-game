@@ -12,6 +12,35 @@ struct Move {
     step: usize,
 }
 
+#[derive(Debug, Clone)]
+struct Square {
+    row: usize,
+    col: usize,
+    player_trap_step: Option<usize>,
+    opponent_trap_step: Option<usize>,
+    player_visits: Vec<usize>,
+    opponent_visits: Vec<usize>,
+    collision_step: Option<usize>,
+    player_trap_hit_step: Option<usize>,
+    opponent_trap_hit_step: Option<usize>,
+}
+
+impl Square {
+    fn new(row: usize, col: usize) -> Self {
+        Square {
+            row,
+            col,
+            player_trap_step: None,
+            opponent_trap_step: None,
+            player_visits: Vec::new(),
+            opponent_visits: Vec::new(),
+            collision_step: None,
+            player_trap_hit_step: None,
+            opponent_trap_hit_step: None,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 enum MoveType {
     Regular(usize, usize),  // row, col
@@ -22,6 +51,7 @@ enum MoveType {
 
 #[derive(Clone)]
 pub struct GameBoard {
+    pub squares: Vec<Vec<Square>>,
     pub size: usize,
     pub player_sequence: Vec<(usize, usize, CellContent)>,
     pub opponent_sequence: Vec<(usize, usize, CellContent)>,
@@ -54,6 +84,14 @@ enum TrapResult {
 
 impl GameBoard {
     pub fn new(size: usize) -> Self {
+        let mut squares = Vec::with_capacity(size);
+        for i in 0..size {
+            let mut row = Vec::with_capacity(size);
+            for j in 0..size {
+                row.push(Square::new(i, j));
+            }
+            squares.push(row);
+        }
         GameBoard {
             size,
             player_sequence: Vec::new(),
@@ -65,6 +103,7 @@ impl GameBoard {
             player_score: 0,
             opponent_score: 0,
             processed_sequence: Vec::new(),
+            squares,
         }
     }
 
@@ -400,6 +439,17 @@ impl GameBoard {
                 CellContent::Empty => "Empty",
             };
             console::log_1(&format!("Step {}: ({}, {}) - {}", i + 1, row, col, content_str).into());
+
+            // Record player moves/traps
+            match content {
+                CellContent::Player => {
+                    self.squares[row][col].player_visits.push(i);
+                },
+                CellContent::Trap => {
+                    self.squares[row][col].player_trap_step = Some(i);
+                },
+                _ => {}
+            }
         }
     
         console::log_1(&"\nPlayer 2 sequence:".into());
@@ -410,38 +460,25 @@ impl GameBoard {
                 CellContent::Empty => "Empty",
             };
             console::log_1(&format!("Step {}: ({}, {}) - {}", i + 1, row, col, content_str).into());
+
+            // Record opponent moves/traps (with rotation)
+            let (rot_row, rot_col) = self.rotate_position(row, col);
+            match content {
+                CellContent::Player => {
+                    self.squares[rot_row][rot_col].opponent_visits.push(i);
+                },
+                CellContent::Trap => {
+                    self.squares[rot_row][rot_col].opponent_trap_step = Some(i);
+                },
+                _ => {}
+            }
         }
 
-        let mut current_step = 0;
-        
-        self.player_sequence = player_board.sequence.clone();
-        self.opponent_sequence = opponent_board.sequence.clone();  
-
-        loop {
-            console::log_1(&format!("\n=== Step {} ===", current_step + 1).into());
-            
-            // Start Turn (A) and Process Moves (P1, P2)
-            let (p1_move, p2_move) = self.process_moves(player_board, opponent_board, current_step);
-            console::log_1(&"\n=== Move Types ===".into());
-            console::log_1(&format!("Player 1 Move: {:#?}", p1_move).into());
-            console::log_1(&format!("Player 2 Move: {:#?}", p2_move).into());
-            // Handle Moves (M1, M2, C1, C2, T1, T2)
-            let (mut p1_result, mut p2_result) = self.handle_moves(p1_move.clone(), p2_move.clone(), current_step);
-            console::log_1(&"\n=== Move Results ===".into());
-            console::log_1(&format!("Player 1 Move: {:#?}", p1_result).into());
-            console::log_1(&format!("Player 2 Move: {:#?}", p2_result).into());
-
-            current_step += 1;
-
-            // Check if round is complete (NR)
-            let p1_done = self.player_collision_step.is_some() || current_step >= player_board.sequence.len();
-            let p2_done = self.opponent_collision_step.is_some() || current_step >= opponent_board.sequence.len();
-            
-            if ( p1_done && p2_done ) || p1_result.goal_reached || p2_result.goal_reached {
-                console::log_1(&"Round Finished".into());
-                break;
+        console::log_1(&"\n=== Square States ===".into());
+        for row in &self.squares {
+            for square in row {
+                console::log_1(&format!("\nSquare ({}, {}): {:#?}", square.row, square.col, square).into());
             }
-
         }
     
         console::log_1(&"\n====== Round Summary ======".into());
