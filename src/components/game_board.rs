@@ -12,7 +12,7 @@ struct Move {
     step: usize,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 enum MoveType {
     Regular(usize, usize),  // row, col
     Trap(usize, usize),     // row, col
@@ -411,20 +411,11 @@ impl GameBoard {
             };
             console::log_1(&format!("Step {}: ({}, {}) - {}", i + 1, row, col, content_str).into());
         }
-        
+
         let mut current_step = 0;
         
         self.player_sequence = player_board.sequence.clone();
         self.opponent_sequence = opponent_board.sequence.clone();  
-
-        // Set initial positions from first moves
-        if let Some(&(row, col, CellContent::Player)) = player_board.sequence.first() {
-            self.player_position = Some((row, col));
-        }
-        if let Some(&(row, col, CellContent::Player)) = opponent_board.sequence.first() {
-            let (rot_row, rot_col) = self.rotate_position(row, col);
-            self.opponent_position = Some((rot_row, rot_col));
-        }
 
         loop {
             console::log_1(&format!("\n=== Step {} ===", current_step + 1).into());
@@ -435,97 +426,13 @@ impl GameBoard {
             console::log_1(&format!("Player 1 Move: {:#?}", p1_move).into());
             console::log_1(&format!("Player 2 Move: {:#?}", p2_move).into());
             // Handle Moves (M1, M2, C1, C2, T1, T2)
-            let (mut p1_result, mut p2_result) = self.handle_moves(p1_move, p2_move, current_step);
+            let (mut p1_result, mut p2_result) = self.handle_moves(p1_move.clone(), p2_move.clone(), current_step);
             console::log_1(&"\n=== Move Results ===".into());
             console::log_1(&format!("Player 1 Move: {:#?}", p1_result).into());
             console::log_1(&format!("Player 2 Move: {:#?}", p2_result).into());
-            
-            // Check Collisions (CH1, D)
-            if self.check_collisions(&p1_result, &p2_result) {
-                console::log_1(&"Round ended due to collision".into());
-                break;
-            }
-            
-            // Check Traps (TC)
-            match self.check_traps(&p1_result, &p2_result, player_board, opponent_board, current_step) {
-                TrapResult::BothHit => {
-                    console::log_1(&"Both players hit traps - ending round".into());
-                    break;
-                },
-                TrapResult::Player1Hit => {
-                    console::log_1(&"Player 1 hit trap - stopping their progress".into());
-                    self.player_collision_step = Some(current_step);
-                    
-                    // Score points for moving forward (SC)
-                    if !p2_result.is_first_step && p2_result.moving_forward {
-                        p2_result.points_earned = 1;
-                        console::log_1(&"Player 2 scored a point for moving forward".into());
-                    }
-    
-                    // Update scores based on results
-                    self.opponent_score += p2_result.points_earned;
-                },
-                TrapResult::Player2Hit => {
-                    console::log_1(&"Player 2 hit trap - stopping their progress".into());
-                    self.opponent_collision_step = Some(current_step);
 
-                    
-                    // Score points for moving forward (SC)
-                    if !p1_result.is_first_step && p1_result.moving_forward {
-                        p1_result.points_earned = 1;
-                        console::log_1(&"Player 1 scored a point for moving forward".into());
-                    }
-    
-                    // Update scores based on results
-                    self.player_score += p1_result.points_earned;
-                },
-                TrapResult::NoTraps => {
-                    // First Step? (FS)
-                    if p1_result.is_first_step || p2_result.is_first_step {
-                        // Next turn without points on first step
-                        console::log_1(&"First step - no points awarded".into());
-                        current_step += 1;
-                        continue;
-                    }
-                    
-                    // Score points for moving forward (SC)
-                    if !p1_result.is_first_step && p1_result.moving_forward {
-                        p1_result.points_earned = 1;
-                        console::log_1(&"Player 1 scored a point for moving forward".into());
-                    }
-                    if !p2_result.is_first_step && p2_result.moving_forward {
-                        p2_result.points_earned = 1;
-                        console::log_1(&"Player 2 scored a point for moving forward".into());
-                    }
-    
-                    // Update scores based on results
-                    self.player_score += p1_result.points_earned;
-                    self.opponent_score += p2_result.points_earned;
-                }
-            }
-            
-            // Update positions if no traps were hit
-            if self.player_collision_step.is_none() && p1_result.new_position.is_some() {
-                self.player_position = p1_result.new_position;
-                if let Some((row, col)) = p1_result.new_position {
-                    self.processed_sequence.push((row, col, CellContent::Player, false, current_step));
-                }
-            }
-            if self.opponent_collision_step.is_none() && p2_result.new_position.is_some() {
-                self.opponent_position = p2_result.new_position;
-                if let Some((row, col)) = p2_result.new_position {
-                    self.processed_sequence.push((row, col, CellContent::Player, true, current_step));
-                }
-            }
+            current_step += 1;
 
-            // Add traps to sequence
-            if let Some((row, col)) = p1_result.trap_placed {
-                self.processed_sequence.push((row, col, CellContent::Trap, false, current_step));
-            }
-            if let Some((row, col)) = p2_result.trap_placed {
-                self.processed_sequence.push((row, col, CellContent::Trap, true, current_step));
-            }
-            
             // Check if round is complete (NR)
             let p1_done = self.player_collision_step.is_some() || current_step >= player_board.sequence.len();
             let p2_done = self.opponent_collision_step.is_some() || current_step >= opponent_board.sequence.len();
@@ -534,13 +441,13 @@ impl GameBoard {
                 console::log_1(&"Round Finished".into());
                 break;
             }
-            
-            // Next Turn (F -> A)
-            current_step += 1;
+
         }
     
         console::log_1(&"\n====== Round Summary ======".into());
         console::log_1(&format!("Final player score: {}", self.player_score).into());
         console::log_1(&format!("Final opponent score: {}", self.opponent_score).into());
-    }
+
+    }        
+
 }
