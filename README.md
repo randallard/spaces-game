@@ -1,4 +1,6 @@
-# Getting started with space game
+# Getting started with spaces game
+
+Check it out at https://randallard.github.io/spaces-game/
 
 We'll be using the newest version of leptos with a postgres database, but initially we'll have sqlite database.
 
