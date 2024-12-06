@@ -97,6 +97,32 @@ impl GameBoard {
                 );
             }
         }
+
+        
+
+        // Draw collision markers
+        for row in 0..self.size {
+            for col in 0..self.size {
+                if let Some(square) = self.squares.get(row).and_then(|r| r.get(col)) {
+                    if square.collision_step.is_some() {
+                        let x = col as f32 * 45.0 + 20.0;
+                        let y = row as f32 * 45.0;
+                        
+                        // Top center
+                        let _ = write!(svg, r#"<text x="{}" y="{}" font-size="20" fill="rgb(220, 38, 38)" text-anchor="middle">*</text>"#, x, y);
+                        
+                        // Bottom center
+                        let _ = write!(svg, r#"<text x="{}" y="{}" font-size="20" fill="rgb(249, 115, 22)" text-anchor="middle">*</text>"#, x, y + 40.0);
+                        
+                        // Left center
+                        let _ = write!(svg, r#"<text x="{}" y="{}" font-size="20" fill="rgb(220, 38, 38)" text-anchor="middle">*</text>"#, x - 20.0, y + 20.0);
+                        
+                        // Right center
+                        let _ = write!(svg, r#"<text x="{}" y="{}" font-size="20" fill="rgb(249, 115, 22)" text-anchor="middle">*</text>"#, x + 20.0, y + 20.0);
+                    }
+                }
+            }
+        }
     
         // Draw pieces and traps based on squares
         for i in 0..self.size {
@@ -260,13 +286,13 @@ impl GameBoard {
                 self.opponent_goal_reached = true;
             }
     
-            // Check for collisions
             if let (Some(p_pos), Some(o_pos)) = (player_checking_square, opponent_checking_square) {
+                console::log_1(&format!("Checking positions - Player: {:?}, Opponent: {:?}", p_pos, o_pos).into());
                 if p_pos == o_pos {
-                    console::log_1(&format!("COLLISION detected at position {:?} on step {}", p_pos, current_step).into());
-                    // Update collision in the square where they collided
+                    console::log_1(&format!("COLLISION at {:?}", p_pos).into());
                     if let Some(square) = self.squares.get_mut(p_pos.0).and_then(|row| row.get_mut(p_pos.1)) {
                         square.collision_step = Some(current_step);
+                        console::log_1(&format!("Set collision_step to {} at {:?}", current_step, p_pos).into());
                     }
                     break 'step_loop;
                 }

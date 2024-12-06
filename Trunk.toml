@@ -11,5 +11,5 @@ target = "index.html"
 
 [[hooks]]
 stage = "pre_build"
-command = "cmd"
-command_arguments = ["/C", "tailwindcss", "-i", "./styles/tailwind.css", "-o", "./dist/tailwind.css"]
+command = "npx"
+command_arguments = ["tailwindcss", "-i", "./styles/tailwind.css", "-o", "./dist/tailwind.css"]
