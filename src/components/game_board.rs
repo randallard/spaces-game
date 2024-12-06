@@ -205,26 +205,50 @@ impl GameBoard {
                     }
                 }                
                 
-                // Draw traps only if they were set before collision
-                if let Some(trap_step) = square.player_trap_step {
-                    if trap_step <= self.player_collision_step.unwrap_or(usize::MAX) {
+                // Replace the existing trap drawing code with this combined approach
+                // First check if both traps exist in the square
+                if let (Some(p_trap), Some(o_trap)) = (square.player_trap_step, square.opponent_trap_step) {
+                    if p_trap <= self.player_collision_step.unwrap_or(usize::MAX) &&
+                    o_trap <= self.opponent_collision_step.unwrap_or(usize::MAX) {
                         let _ = write!(
                             svg,
-                            r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4"/>"
-                            <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                            x + 5.0, y + 5.0, x + 30.0, y + 30.0, trap_step + 1
+                            r#"<g transform="translate({} {}) rotate(3 15 15)">
+                                <path d="M0 0 l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4" opacity="0.6"/>
+                            </g>
+                            <text x="{:.0}" y="{:.0}" font-size="16" fill="rgb(220, 38, 38)" text-anchor="middle" dy=".3em">{}</text>"#,
+                            x + 5.0, y + 5.0, x + 5.0, y + 20.0, p_trap + 1
+                        );
+                        let _ = write!(
+                            svg,
+                            r#"<g transform="translate({} {}) rotate(-3 15 15)">
+                                <path d="M0 0 l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4" opacity="0.6"/>
+                            </g>
+                            <text x="{:.0}" y="{:.0}" font-size="16" fill="rgb(249, 115, 22)" text-anchor="middle" dy=".3em">{}</text>"#,
+                            x + 5.0, y + 5.0, x + 35.0, y + 20.0, o_trap + 1
                         );
                     }
-                }
+                } else {
+                    // Draw single traps as before
+                    if let Some(trap_step) = square.player_trap_step {
+                        if trap_step <= self.player_collision_step.unwrap_or(usize::MAX) {
+                            let _ = write!(
+                                svg,
+                                r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(220, 38, 38)" stroke-width="4" opacity="0.6"/>"
+                                <text x="{:.0}" y="{:.0}" font-size="16" fill="rgb(220, 38, 38)" text-anchor="middle" dy=".3em">{}</text>"#,
+                                x + 5.0, y + 5.0, x + 35.0, y + 20.0, trap_step + 1
+                            );
+                        }
+                    }
 
-                if let Some(trap_step) = square.opponent_trap_step {
-                    if trap_step <= self.opponent_collision_step.unwrap_or(usize::MAX) {
-                        let _ = write!(
-                            svg,
-                            r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4"/>"
-                            <text x="{:.0}" y="{:.0}" font-size="16" fill="white" text-anchor="middle" dy=".3em">{}</text>"#,
-                            x + 5.0, y + 5.0, x + 30.0, y + 30.0, trap_step + 1
-                        );
+                    if let Some(trap_step) = square.opponent_trap_step {
+                        if trap_step <= self.opponent_collision_step.unwrap_or(usize::MAX) {
+                            let _ = write!(
+                                svg,
+                                r#"<path d="M{} {} l30 30 m0 -30 l-30 30" stroke="rgb(249, 115, 22)" stroke-width="4" opacity="0.6"/>"
+                                <text x="{:.0}" y="{:.0}" font-size="16" fill="rgb(249, 115, 22)" text-anchor="middle" dy=".3em">{}</text>"#,
+                                x + 5.0, y + 5.0, x + 35.0, y + 20.0, trap_step + 1
+                            );
+                        }
                     }
                 }
             }
