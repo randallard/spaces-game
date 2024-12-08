@@ -16,9 +16,7 @@ use rand;
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub enum GamePhase {
     SelectingBoards,
-    DisplayingBoards,  
     ShowingResults,
-    RoundComplete,  
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
@@ -301,45 +299,81 @@ pub fn Game(
                             </div>
                 
                             // Next round button
-                            <button
-                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
-                                on:click=move |_| {
-                                    let mut current_state = game_state.get();
-        
-                                    // Record win/loss when game is complete
-                                    if current_state.current_round == 8 {
-                                        if let Some(opponent) = current_state.player2.clone() {
-                                            let won = current_state.player1_score > current_state.player2_score;
-                                            let _ = update_opponent_stats(&opponent.id, won);
-                                        }
-                                    }
-
-                                    current_state.current_round += 1;
-                                    if current_state.current_round <= 8 {
-                                        current_state.phase = GamePhase::SelectingBoards;
-                                        current_state.player1_board = None;
-                                        current_state.player2_board = None;
-                                        current_state.game_board = None;
-                                        set_timer.set(match current_state.speed {
-                                            GameSpeed::Lightning => 1,
-                                            GameSpeed::Quick => 5,
-                                            GameSpeed::Relaxed => 10,
-                                            GameSpeed::Chill => 999999,
-                                        });
-                                    }
-                                    game_state.set(current_state);
-                                }
-                            >
-                                {move || if game_state.get().current_round <= 8 {
-                                    "Next Round"
+                            {move || {
+                                let current_state = game_state.get();
+                                if current_state.current_round < 8 {
+                                    view! {
+                                        <button
+                                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
+                                            on:click=move |_| {
+                                                let mut current_state = game_state.get();
+                                                current_state.current_round += 1;
+                                                current_state.phase = GamePhase::SelectingBoards;
+                                                current_state.player1_board = None;
+                                                current_state.player2_board = None;
+                                                current_state.game_board = None;
+                                                set_timer.set(match current_state.speed {
+                                                    GameSpeed::Lightning => 1,
+                                                    GameSpeed::Quick => 5,
+                                                    GameSpeed::Relaxed => 10,
+                                                    GameSpeed::Chill => 999999,
+                                                });
+                                                game_state.set(current_state);
+                                            }
+                                        >
+                                            "Next Round"
+                                        </button>
+                                    }.into_any()
                                 } else {
-                                    "Game Complete"
-                                }}
-                            </button>
-                        </div>
-                    }.into_any(),
-                    GamePhase::DisplayingBoards | GamePhase::RoundComplete => todo!(),
-                }}
+                                    let current_state_clone = current_state.clone(); // Clone here for the second button
+                                    view! {
+                                        <div class="flex gap-4">
+                                            <button
+                                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
+                                                on:click=move |_| {
+                                                    // Record the game result
+                                                    if let Some(opponent) = current_state.player2.clone() {
+                                                        let won = current_state.player1_score > current_state.player2_score;
+                                                        let _ = update_opponent_stats(&opponent.id, won);
+                                                    }
+                                                    // Start new game
+                                                    let mut new_state = GameState::new(
+                                                        current_state.player1.clone(),
+                                                        current_state.player2.clone().unwrap()
+                                                    );
+                                                    new_state.speed = current_state.speed.clone();
+                                                    game_state.set(new_state);
+                                                    // Reset timer
+                                                    set_timer.set(match current_state.speed {
+                                                        GameSpeed::Lightning => 1,
+                                                        GameSpeed::Quick => 5,
+                                                        GameSpeed::Relaxed => 10,
+                                                        GameSpeed::Chill => 999999,
+                                                    });
+                                                }
+                                            >
+                                                "Play Again"
+                                            </button>
+                                            <button
+                                                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded"
+                                                on:click=move |_| {
+                                                    // Record the game result before exiting
+                                                    if let Some(opponent) = current_state_clone.player2.clone() {
+                                                        let won = current_state_clone.player1_score > current_state_clone.player2_score;
+                                                        let _ = update_opponent_stats(&opponent.id, won);
+                                                    }
+                                                    on_exit.run(());
+                                                }
+                                            >
+                                                "I'm Done"
+                                            </button>
+                                        </div>
+                                    }.into_any()
+                                }
+                            }}
+                            </div>
+                            }.into_any(),
+                        }}
             </div>
         </div>
     }
