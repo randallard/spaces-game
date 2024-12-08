@@ -2,6 +2,31 @@
 
 Check it out at https://randallard.github.io/spaces-game/
 
+## Development
+
+You'll need to install Tailwind CSS locally for the project. 
+
+1. First, initialize npm for the project:
+```powershell
+npm init -y
+```
+
+2. Then install Tailwind CSS as a dev dependency:
+```powershell
+npm install -D tailwindcss
+```
+
+3. Initialize Tailwind CSS:
+```powershell
+npx tailwindcss init
+```
+
+After these steps, try `trunk serve` again. The build should work now since Tailwind CSS will be available locally in the project.
+
+Let me know what output you get and we can continue troubleshooting if needed!
+
+## Description
+
 We'll be using the newest version of leptos with a postgres database, but initially we'll have sqlite database.
 
 

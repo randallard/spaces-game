@@ -272,6 +272,8 @@ impl GameBoard {
     
         console::log_1(&"\n====== Starting Process Moves ======".into());
         console::log_1(&format!("Processing {} total steps", max_steps).into());
+        console::log_1(&format!("Player has {} total steps", player_goal_step).into());
+        console::log_1(&format!("Opponent has {} total steps", opponent_goal_step).into());
     
         'step_loop: for current_step in 0..max_steps {
             console::log_1(&format!("\n=== Step {} ===", current_step).into());
@@ -286,6 +288,8 @@ impl GameBoard {
             // Find squares where players are at this step
             let mut player_checking_square = None;
             let mut opponent_checking_square = None;
+            console::log_1(&format!("Player checking square: {:?}", player_checking_square).into());
+            console::log_1(&format!("Opponent checking square: {:?}", opponent_checking_square).into());
     
             // Search through all squares to find player positions for this step
             for row in &mut self.squares {

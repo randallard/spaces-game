@@ -1,0 +1,15 @@
+{
+  "name": "spaces-game",
+  "version": "1.0.0",
+  "description": "Check it out at https://randallard.github.io/spaces-game/",
+  "main": "tailwind.config.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.16"
+  }
+}
