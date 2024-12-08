@@ -262,249 +262,187 @@ impl GameBoard {
         (self.size - 1 - row, self.size - 1 - col)
     }
     
-    fn process_moves(&mut self) {
+    pub fn process_turn(&mut self, player_board: &Board, opponent_board: &Board) {
+        console::log_1(&"\n====== Starting New Game Round ======".into());
+        
+        // Log initial sequences
+        console::log_1(&"\nPlayer Sequence:".into());
+        for (i, &(row, col, ref content)) in player_board.sequence.iter().enumerate() {
+            let content_str = match content {
+                CellContent::Player => "Move",
+                CellContent::Trap => "Trap",
+                CellContent::Final => "Final",
+                CellContent::Empty => "Empty",
+            };
+            console::log_1(&format!("Step {}: ({}, {}) - {}", i, row, col, content_str).into());
+        }
+    
+        console::log_1(&"\nOpponent Sequence:".into());
+        for (i, &(row, col, ref content)) in opponent_board.sequence.iter().enumerate() {
+            let content_str = match content {
+                CellContent::Player => "Move",
+                CellContent::Trap => "Trap",
+                CellContent::Final => "Final",
+                CellContent::Empty => "Empty",
+            };
+            let (rot_row, rot_col) = self.rotate_position(row, col);
+            console::log_1(&format!("Step {}: ({}, {}) rotated to ({}, {}) - {}", 
+                i, row, col, rot_row, rot_col, content_str).into());
+        }
+        
+        // Reset game state
+        self.player_score = 0;
+        self.opponent_score = 0;
+        self.player_position = None;
+        self.opponent_position = None;
+        self.player_round_ended = false;
+        self.opponent_round_ended = false;
+        
         let max_steps = std::cmp::max(
-            self.player_sequence.len(),
-            self.opponent_sequence.len()
+            player_board.sequence.len(),
+            opponent_board.sequence.len()
         );
-        let player_goal_step = self.player_sequence.len();
-        let opponent_goal_step = self.opponent_sequence.len();
     
-        console::log_1(&"\n====== Starting Process Moves ======".into());
-        console::log_1(&format!("Processing {} total steps", max_steps).into());
-        console::log_1(&format!("Player has {} total steps", player_goal_step).into());
-        console::log_1(&format!("Opponent has {} total steps", opponent_goal_step).into());
+        'step_loop: for step in 0..max_steps {
+            console::log_1(&format!("\n=== Processing Step {} ===", step).into());
     
-        'step_loop: for current_step in 0..max_steps {
-            console::log_1(&format!("\n=== Step {} ===", current_step).into());
-
-            if player_goal_step == current_step {
-                console::log_1(&format!("Player SHOULDA'D Goal at {}", current_step).into());  
-            }
-            if opponent_goal_step == current_step {
-                console::log_1(&format!("Opponent SHOULDA'D Goal at {}", current_step).into());  
-            }
-    
-            // Find squares where players are at this step
-            let mut player_checking_square = None;
-            let mut opponent_checking_square = None;
-            console::log_1(&format!("Player checking square: {:?}", player_checking_square).into());
-            console::log_1(&format!("Opponent checking square: {:?}", opponent_checking_square).into());
-    
-            // Search through all squares to find player positions for this step
-            for row in &mut self.squares {
-                for square in row {
-                    if square.player_visits.contains(&current_step) {
-                        player_checking_square = square.position;
-                        console::log_1(&format!("Found player at position: {:?}", square.position).into());
-                    }
-                    if square.opponent_visits.contains(&current_step) {
-                        opponent_checking_square = square.position;
-                        console::log_1(&format!("Found opponent at position: {:?}", square.position).into());
-                    }
+            // Process player's move
+            if !self.player_round_ended && step < player_board.sequence.len() {
+                let (row, col, content) = &player_board.sequence[step];
+                match content {
+                    CellContent::Player => {
+                        console::log_1(&format!("Player moving to ({}, {})", *row, *col).into());
+                        if let Some((prev_row, _)) = self.player_position {
+                            if prev_row > *row {
+                                self.player_score += 1;
+                                console::log_1(&format!("Player scored forward move point! Score now {}", 
+                                    self.player_score).into());
+                            }
+                        }
+                        self.player_position = Some((*row, *col));
+                        self.squares[*row][*col].player_visits.push(step);
+                    },
+                    CellContent::Trap => {
+                        console::log_1(&format!("Player placed trap at ({}, {})", *row, *col).into());
+                        self.squares[*row][*col].player_trap_step = Some(step);
+                    },
+                    CellContent::Final => {
+                        console::log_1(&"Player reached goal!".into());
+                        self.player_goal_reached = true;
+                        self.player_score += 1;
+                        console::log_1(&format!("Player scored goal point! Score now {}", 
+                            self.player_score).into());
+                        self.player_round_ended = true;
+                    },
+                    _ => {}
                 }
             }
-
-            if self.player_collision_step.is_none() && player_checking_square.is_none() {
-                console::log_1(&format!("Player Goal Reached at {}", current_step).into());                    
-                self.player_goal_reached = true;
-            }  
-            if self.opponent_collision_step.is_none() && opponent_checking_square.is_none() {
-                console::log_1(&format!("Opponent Goal Reached at {}", current_step).into());
-                self.opponent_goal_reached = true;
+    
+            // Process opponent's move
+            if !self.opponent_round_ended && step < opponent_board.sequence.len() {
+                let (row, col, content) = &opponent_board.sequence[step];
+                let (rot_row, rot_col) = self.rotate_position(*row, *col);
+                
+                match content {
+                    CellContent::Player => {
+                        console::log_1(&format!("Opponent moving to ({}, {})", rot_row, rot_col).into());
+                        if let Some((prev_row, _)) = self.opponent_position {
+                            if prev_row < rot_row {
+                                self.opponent_score += 1;
+                                console::log_1(&format!("Opponent scored forward move point! Score now {}", 
+                                    self.opponent_score).into());
+                            }
+                        }
+                        self.opponent_position = Some((rot_row, rot_col));
+                        self.squares[rot_row][rot_col].opponent_visits.push(step);
+                    },
+                    CellContent::Trap => {
+                        console::log_1(&format!("Opponent placed trap at ({}, {})", rot_row, rot_col).into());
+                        self.squares[rot_row][rot_col].opponent_trap_step = Some(step);
+                    },
+                    CellContent::Final => {
+                        console::log_1(&"Opponent reached goal!".into());
+                        self.opponent_goal_reached = true;
+                        self.opponent_score += 1;
+                        console::log_1(&format!("Opponent scored goal point! Score now {}", 
+                            self.opponent_score).into());
+                        self.opponent_round_ended = true;
+                    },
+                    _ => {}
+                }
             }
     
-            if let (Some(p_pos), Some(o_pos)) = (player_checking_square, opponent_checking_square) {
-                console::log_1(&format!("Checking positions - Player: {:?}, Opponent: {:?}", p_pos, o_pos).into());
+            // Check for collisions
+            if let (Some(p_pos), Some(o_pos)) = (self.player_position, self.opponent_position) {
                 if p_pos == o_pos {
-                    console::log_1(&format!("COLLISION at {:?}", p_pos).into());
-                    if let Some(square) = self.squares.get_mut(p_pos.0).and_then(|row| row.get_mut(p_pos.1)) {
-                        square.collision_step = Some(current_step);
-                        console::log_1(&format!("Set collision_step to {} at {:?}", current_step, p_pos).into());
+                    console::log_1(&format!("\nCOLLISION at square ({}, {})!", p_pos.0, p_pos.1).into());
+                    self.squares[p_pos.0][p_pos.1].collision_step = Some(step);
+                    
+                    if self.player_score > 0 {
+                        self.player_score -= 1;
+                        console::log_1(&format!("Player lost point from collision! Score now {}", 
+                            self.player_score).into());
+                    }
+                    if self.opponent_score > 0 {
+                        self.opponent_score -= 1;
+                        console::log_1(&format!("Opponent lost point from collision! Score now {}", 
+                            self.opponent_score).into());
                     }
                     break 'step_loop;
                 }
             }
     
-            // Process player movement and traps
+            // Check for trap hits
             if !self.player_round_ended {
-                if let Some((row, col)) = player_checking_square {
-                    let square = &mut self.squares[row][col];
-                    
-                    console::log_1(&format!("Checking player at ({}, {})", row, col).into());
-                    
-                    // Check if player hit opponent trap
-                    if let Some(trap_step) = square.opponent_trap_step {
-                        if trap_step < self.opponent_collision_step.unwrap_or(usize::MAX) && 
-                           trap_step <= current_step {
-                            console::log_1(&format!("Player hit opponent trap at ({}, {}) from step {}", row, col, trap_step).into());
-                            square.player_trap_hit_step = Some(current_step);
-                            self.player_collision_step = Some(current_step);
-                        }
-                    } else if let Some((prev_row, _)) = self.player_position {
-                        // Check for forward movement
-                        if prev_row > row {
-                            console::log_1(&format!("Player moved forward from row {} to {}", prev_row, row).into());
-                            square.player_forward_move = true;
-                            self.player_score += 1;
-                            console::log_1(&format!("Player score increased to {}", self.player_score).into());
-                            self.player_position = Some((row, col));
-                        } else {
-                            console::log_1(&format!("Player moved but not forward row {} - prev_row {}",row,prev_row).into());
-                        }
-                    }
-                }
-            }
-    
-            // Process opponent movement and traps
-            if !self.opponent_round_ended {
-                if let Some((row, col)) = opponent_checking_square {
-                    let square = &mut self.squares[row][col];
-                    
-                    console::log_1(&format!("Checking opponent at ({}, {})", row, col).into());
-                    
-                    // Check if opponent hit player trap
-                    if let Some(trap_step) = square.player_trap_step {
-                        if trap_step < self.player_collision_step.unwrap_or(usize::MAX) && 
-                           trap_step <= current_step {
-                            console::log_1(&format!("Opponent hit player trap at ({}, {}) from step {}", row, col, trap_step).into());
-                            square.opponent_trap_hit_step = Some(current_step);
-                            self.opponent_collision_step = Some(current_step);
-                        }
-                    } else if let Some((prev_row, _)) = self.opponent_position {
-                        // Check for forward movement
-                        if prev_row < row {
-                            console::log_1(&format!("Opponent moved forward from row {} to {}", prev_row, row).into());
-                            square.opponent_forward_move = true;
-                            self.opponent_score += 1;
-                            console::log_1(&format!("Opponent score increased to {}", self.opponent_score).into());
-                            self.opponent_position = Some((row, col));
-                        } else {
-                            console::log_1(&format!("Opponent moved but not forward row {} - prev_row {}",row,prev_row).into());
-                        }
-                    }
-                }
-            }
-    
-            // Print square states after each step
-            if current_step % 2 == 0 {  // Print every other step to reduce noise
-                console::log_1(&"\n--- Square States ---".into());
-                for row in &self.squares {
-                    for square in row {
-                        if let Some((r, c)) = square.position {
-                            if !square.player_visits.is_empty() || 
-                               !square.opponent_visits.is_empty() ||
-                               square.player_trap_step.is_some() ||
-                               square.opponent_trap_step.is_some() {
-                                console::log_1(&format!("\nSquare ({}, {}): {:#?}", r, c, square).into());
+                if let Some((row, col)) = self.player_position {
+                    if let Some(trap_step) = self.squares[row][col].opponent_trap_step {
+                        if trap_step <= step {
+                            console::log_1(&format!("\nPlayer hit opponent trap at ({}, {})!", row, col).into());
+                            self.squares[row][col].player_trap_hit_step = Some(step);
+                            if self.player_score > 0 {
+                                self.player_score -= 1;
+                                console::log_1(&format!("Player lost point from trap! Score now {}", 
+                                    self.player_score).into());
                             }
+                            self.player_round_ended = true;
                         }
                     }
                 }
             }
-            
-            if self.player_goal_reached || self.opponent_goal_reached {
-                break;
-            }
-        }        
-
-        if self.player_goal_reached {
-            self.player_score += 1
-        }  
-        if self.opponent_goal_reached {
-            self.opponent_score += 1
-        }
     
-        console::log_1(&"\n====== Process Moves Complete ======".into());
-        console::log_1(&format!("Final player score: {}", self.player_score).into());
-        console::log_1(&format!("Final opponent score: {}", self.opponent_score).into());
-
-        console::log_1(&"\n====== Final GameBoard State ======".into());
-        console::log_1(&format!("{:#?}", self).into()); 
-    }
-    
-    pub fn process_turn(&mut self, player_board: &Board, opponent_board: &Board) {
-        console::log_1(&"\n====== Starting New Game Round ======".into());
-
-        // Reset game state
-        self.player_round_ended = false;
-        self.opponent_round_ended = false;
-        self.player_position = None;
-        self.opponent_position = None;
-        self.player_collision_step = None;
-        self.opponent_collision_step = None;
-        
-        // Reset sequences
-        self.player_sequence = player_board.sequence.clone();
-        self.opponent_sequence = opponent_board.sequence.clone();
-        
-        // Debug: Print full sequences
-        console::log_1(&"\nPlayer 1 sequence:".into());
-        for (i, &(row, col, ref content)) in player_board.sequence.iter().enumerate() {
-            let content_str = match content {
-                CellContent::Player => "Player",
-                CellContent::Trap => "Trap",
-                CellContent::Empty => "Empty",
-                CellContent::Final => "Final",
-            };
-            console::log_1(&format!("Step {}: ({}, {}) - {}", i + 1, row, col, content_str).into());
-
-            // Record player moves/traps
-            match content {
-                CellContent::Player => {
-                    self.squares[row][col].player_visits.push(i);
-                    if i == 0 {
-                        self.player_position = Some((row, col)); 
+            if !self.opponent_round_ended {
+                if let Some((row, col)) = self.opponent_position {
+                    if let Some(trap_step) = self.squares[row][col].player_trap_step {
+                        if trap_step <= step {
+                            console::log_1(&format!("\nOpponent hit player trap at ({}, {})!", row, col).into());
+                            self.squares[row][col].opponent_trap_hit_step = Some(step);
+                            if self.opponent_score > 0 {
+                                self.opponent_score -= 1;
+                                console::log_1(&format!("Opponent lost point from trap! Score now {}", 
+                                    self.opponent_score).into());
+                            }
+                            self.opponent_round_ended = true;
+                        }
                     }
-                },
-                CellContent::Trap => {
-                    self.squares[row][col].player_trap_step = Some(i);
-                },
-                _ => {}
-            }
-        }
-    
-        console::log_1(&"\nPlayer 2 sequence:".into());
-        for (i, &(row, col, ref content)) in opponent_board.sequence.iter().enumerate() {
-            let content_str = match content {
-                CellContent::Player => "Player",
-                CellContent::Trap => "Trap",
-                CellContent::Empty => "Empty",
-                CellContent::Final => "Final",
-            };
-            console::log_1(&format!("Step {}: ({}, {}) - {}", i + 1, row, col, content_str).into());
-
-            // Record opponent moves/traps (with rotation)
-            let (rot_row, rot_col) = self.rotate_position(row, col);
-            match content {
-                CellContent::Player => {
-                    self.squares[rot_row][rot_col].opponent_visits.push(i);
-                    if i == 0 {
-                        self.opponent_position = Some((rot_row, rot_col)); 
-                    }
-                },
-                CellContent::Trap => {
-                    self.squares[rot_row][rot_col].opponent_trap_step = Some(i);
-                },
-                _ => {}
-            }
-        }
-
-        console::log_1(&"\n=== Square States ===".into());
-        for row in &self.squares {
-            for square in row {
-                if let Some((row,col)) = square.position {
-                    console::log_1(&format!("\nSquare ({}, {}): {:#?}", row, col, square).into());
                 }
             }
+    
+            // Stop if both players have ended their round
+            if self.player_round_ended && self.opponent_round_ended {
+                console::log_1(&"\nBoth players have ended their round".into());
+                break 'step_loop;
+            }
+    
+            // Stop if either players has reched their goal
+            if self.player_goal_reached || self.opponent_goal_reached {
+                console::log_1(&"\nEnding round for goal reached".into());
+                break 'step_loop;
+            }
         }
     
-        self.process_moves();
-
         console::log_1(&"\n====== Round Summary ======".into());
         console::log_1(&format!("Final player score: {}", self.player_score).into());
         console::log_1(&format!("Final opponent score: {}", self.opponent_score).into());
-
-    }        
+    }    
 
 }
