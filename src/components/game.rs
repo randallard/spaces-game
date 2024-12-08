@@ -1,6 +1,7 @@
 use leptos::*;
 use leptos::prelude::*;
 use leptos::callback::Callback;
+use crate::update_opponent_stats;
 use crate::components::opponent::OpponentType;
 use crate::components::utils::{generate_thumbnail, generate_opponent_thumbnail};
 
@@ -304,6 +305,15 @@ pub fn Game(
                                 class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
                                 on:click=move |_| {
                                     let mut current_state = game_state.get();
+        
+                                    // Record win/loss when game is complete
+                                    if current_state.current_round == 8 {
+                                        if let Some(opponent) = current_state.player2.clone() {
+                                            let won = current_state.player1_score > current_state.player2_score;
+                                            let _ = update_opponent_stats(&opponent.id, won);
+                                        }
+                                    }
+
                                     current_state.current_round += 1;
                                     if current_state.current_round <= 8 {
                                         current_state.phase = GamePhase::SelectingBoards;

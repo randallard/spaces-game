@@ -3,6 +3,7 @@ use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 use web_sys::{MouseEvent, Storage, window};
 use serde::{Serialize, Deserialize};
+use std::collections::HashMap;
 
 mod components;
 use components::board::BoardCreator;
@@ -13,10 +14,18 @@ use components::opponent::{
 };
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
+pub struct OpponentStats {
+    pub opponent_id: String,
+    pub wins: i32,
+    pub losses: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct UserData {
     name: String,
     greeting: String,
     default_game_speed: GameSpeed,
+    opponent_stats: HashMap<String, OpponentStats>,
 }
 
 fn get_local_storage() -> Option<Storage> {
@@ -46,19 +55,59 @@ fn load_user_data() -> Option<UserData> {
     }
 }
 
+// Modify the save_user_data function:
 fn save_user_data(name: &str, greeting: &str, speed: GameSpeed) -> Result<(), serde_json::Error> {
     if let Some(storage) = get_local_storage() {
-        let data = UserData {
+        // First try to load existing data to preserve opponent stats
+        let mut existing_data = load_user_data().unwrap_or_else(|| UserData {
             name: name.to_string(),
             greeting: greeting.to_string(),
-            default_game_speed: speed,
-        };
-        let json = serde_json::to_string(&data)?;
+            default_game_speed: speed.clone(),
+            opponent_stats: HashMap::new(),  // Initialize empty stats
+        });
+        
+        // Update the basic info
+        existing_data.name = name.to_string();
+        existing_data.greeting = greeting.to_string();
+        existing_data.default_game_speed = speed.clone();
+
+        let json = serde_json::to_string(&existing_data)?;
         storage.set_item("user_data", &json).unwrap_or_else(|e| {
             web_sys::console::log_1(&format!("Failed to save to storage: {:?}", e).into());
         });
     } else {
         web_sys::console::log_1(&"No local storage available".into());
+    }
+    Ok(())
+}
+
+// Add this new function:
+pub fn update_opponent_stats(opponent_id: &str, won: bool) -> Result<(), serde_json::Error> {
+    if let Some(storage) = get_local_storage() {
+        let mut user_data = load_user_data().unwrap_or_else(|| UserData {
+            name: String::new(),
+            greeting: String::new(),
+            default_game_speed: GameSpeed::Quick,
+            opponent_stats: HashMap::new(),
+        });
+
+        let stats = user_data.opponent_stats.entry(opponent_id.to_string())
+            .or_insert(OpponentStats {
+                opponent_id: opponent_id.to_string(),
+                wins: 0,
+                losses: 0,
+            });
+
+        if won {
+            stats.wins += 1;
+        } else {
+            stats.losses += 1;
+        }
+
+        let json = serde_json::to_string(&user_data)?;
+        storage.set_item("user_data", &json).unwrap_or_else(|e| {
+            web_sys::console::log_1(&format!("Failed to save to storage: {:?}", e).into());
+        });
     }
     Ok(())
 }
@@ -152,6 +201,7 @@ fn App() -> impl IntoView {
                             each=move || opponents.get()
                             key=|opponent| opponent.id.clone()
                             children=move |opponent: Opponent| {
+                                let opponent_for_stats = opponent.clone();  // Clone at the start
                                 view! {
                                     <div class="flex items-center justify-between p-2 bg-slate-800 rounded">
                                     <div class="flex items-center gap-2 text-gray-300">
@@ -159,6 +209,25 @@ fn App() -> impl IntoView {
                                             {if matches!(opponent.opponent_type, OpponentType::Computer) { "C" } else { "H" }}
                                         </span>
                                         {opponent.name.clone()}
+                                        {move || {
+                                            if let Some(user_data) = load_user_data() {
+                                                if let Some(stats) = user_data.opponent_stats.get(&opponent_for_stats.id) {
+                                                    view! {
+                                                        <span class="text-sm text-gray-500 ml-2">
+                                                            "(" {stats.wins} "-" {stats.losses} ")"
+                                                        </span>
+                                                    }.into_any()
+                                                } else {
+                                                    view! {
+                                                        <span class="text-sm text-gray-500 ml-2">"(0-0)"</span>
+                                                    }.into_any()
+                                                }
+                                            } else {
+                                                view! {
+                                                    <span class="text-sm text-gray-500 ml-2">"(0-0)"</span>
+                                                }.into_any()
+                                            }
+                                        }}
                                     </div>
                                     <div class="flex gap-2">
                                         {
@@ -244,12 +313,6 @@ fn App() -> impl IntoView {
                                                     }
                                                 }
                                             </div>
-                                                <button
-                                                    class="text-red-400 hover:text-red-300 opacity-50 hover:opacity-100 transition-opacity"
-                                                    on:click=move |_| opponent_to_delete.set(Some(delete_opponent.clone()))
-                                                >
-                                                    "Remove"
-                                                </button>
                                             }
                                         }
                                     </div>
@@ -384,6 +447,77 @@ fn App() -> impl IntoView {
                                 </option>
                             </select>
                         </div>
+
+
+                        <div>
+                        <h3 class="text-xl font-bold mb-4">"Manage Opponents"</h3>
+                        <div class="flex flex-col gap-2 max-h-64 overflow-y-auto">
+                            <For
+                                each=move || opponents.get()
+                                key=|opponent| opponent.id.clone()
+                                children=move |opponent: Opponent| {
+                                    let opponent_id_stats = opponent.id.clone();
+                                    let opponent_id_remove = opponent.id.clone();
+                                    let opponent_type = opponent.opponent_type.clone();
+                                    let opponent_name = opponent.name.clone();
+                    
+                                    view! {
+                                        <div class="flex items-center justify-between p-2 bg-slate-800 rounded">
+                                            <div class="flex items-center gap-2 text-gray-300">
+                                                <span class="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-xs">
+                                                    {if matches!(opponent_type, OpponentType::Computer) { "C" } else { "H" }}
+                                                </span>
+                                                {opponent_name}
+                                                {move || {
+                                                    if let Some(user_data) = load_user_data() {
+                                                        if let Some(stats) = user_data.opponent_stats.get(&opponent_id_stats) {
+                                                            view! {
+                                                                <span class="text-sm text-gray-500 ml-2">
+                                                                    "(" {stats.wins} "-" {stats.losses} ")"
+                                                                </span>
+                                                            }.into_any()
+                                                        } else {
+                                                            view! {
+                                                                <span class="text-sm text-gray-500 ml-2">"(0-0)"</span>
+                                                            }.into_any()
+                                                        }
+                                                    } else {
+                                                        view! {
+                                                            <span class="text-sm text-gray-500 ml-2">"(0-0)"</span>
+                                                        }.into_any()
+                                                    }
+                                                }}
+                                            </div>
+                                            
+                                            <div class="flex gap-2">
+                                            // Add some debugging and make the condition more explicit
+                                            {
+                                                let is_human = !matches!(opponent_type, OpponentType::Computer);
+                                                if is_human {
+                                                    view! {
+                                                        <button
+                                                            class="text-red-400 hover:text-red-300 text-sm"
+                                                            on:click=move |_| {
+                                                                let _ = delete_opponent(&opponent_id_remove);
+                                                                opponents_trigger.update(|v| *v = !*v);
+                                                            }
+                                                        >
+                                                            "Remove"
+                                                        </button>
+                                                    }.into_any()
+                                                } else {
+                                                    view! { <span></span> }.into_any()
+                                                }
+                                            }
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            />
+                        </div>
+                    </div>                        
+
+
                         <div class="flex justify-end gap-4 mt-2">
                             <button
                                 class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
