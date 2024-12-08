@@ -11,5 +11,5 @@ target = "index.html"
 
 [[hooks]]
 stage = "pre_build"
-command = "npx.cmd"
-command_arguments = ["tailwindcss", "-i", "./styles/tailwind.css", "-o", "./dist/tailwind.css"]
+command = "sh"
+command_arguments = ["-c", "NPX_CMD=$([ \"$OSTYPE\" = \"msys\" ] && echo npx.cmd || echo npx) && $NPX_CMD tailwindcss -i ./styles/tailwind.css -o ./dist/tailwind.css"]
