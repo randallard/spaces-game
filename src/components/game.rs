@@ -70,6 +70,7 @@ pub fn Game(
     #[prop(into)] opponent: Opponent,
     #[prop(into)] speed: GameSpeed,  
     #[prop(into)] on_exit: Callback<()>,
+    #[prop(into)] on_stats_update: Callback<()>,
 ) -> impl IntoView {
     let game_state = RwSignal::new({
         let mut state = GameState::new(player_name, opponent);
@@ -302,27 +303,56 @@ pub fn Game(
                             {move || {
                                 let current_state = game_state.get();
                                 if current_state.current_round < 8 {
-                                    view! {
-                                        <button
-                                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
-                                            on:click=move |_| {
-                                                let mut current_state = game_state.get();
-                                                current_state.current_round += 1;
-                                                current_state.phase = GamePhase::SelectingBoards;
-                                                current_state.player1_board = None;
-                                                current_state.player2_board = None;
-                                                current_state.game_board = None;
-                                                set_timer.set(match current_state.speed {
-                                                    GameSpeed::Lightning => 1,
-                                                    GameSpeed::Quick => 5,
-                                                    GameSpeed::Relaxed => 10,
-                                                    GameSpeed::Chill => 999999,
-                                                });
-                                                game_state.set(current_state);
-                                            }
-                                        >
-                                            "Next Round"
-                                        </button>
+                                    view! {            
+                                        <div class="mt-4">
+                                            <h3 class="text-xl font-bold mb-2 text-center">
+                                                "Choose your next board"
+                                            </h3>
+                                            <div class="grid grid-cols-4 gap-4 max-w-xl mx-auto">
+                                                <For
+                                                    each=move || boards.get()
+                                                    key=|board| board.thumbnail.clone()
+                                                    children=move |board: SavedBoard| {
+                                                        view! {
+                                                            <button
+                                                                class="w-24 h-24 rounded border border-slate-700 hover:border-blue-500 transition-colors"
+                                                                on:click=move |_| {
+                                                                    let mut current_state = game_state.get();
+                                                                    current_state.current_round += 1;
+                                                                    current_state.player1_board = Some(board.clone());
+                                                                    
+                                                                    // Select random board for CPU opponent
+                                                                    if let Some(ref opponent) = current_state.player2 {
+                                                                        if matches!(opponent.opponent_type, OpponentType::Computer) {
+                                                                            let available_boards = boards.get();
+                                                                            if let Some(cpu_board) = select_random_board(available_boards) {
+                                                                                current_state.player2_board = Some(cpu_board);
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    
+                                                                    current_state.phase = GamePhase::ShowingResults;
+                                                                    current_state.game_board = None;
+                                                                    set_timer.set(match current_state.speed {
+                                                                        GameSpeed::Lightning => 1,
+                                                                        GameSpeed::Quick => 5,
+                                                                        GameSpeed::Relaxed => 10,
+                                                                        GameSpeed::Chill => 999999,
+                                                                    });
+                                                                    game_state.set(current_state);
+                                                                }
+                                                            >
+                                                                <img 
+                                                                    src=board.thumbnail.clone()
+                                                                    alt="Board option" 
+                                                                    class="w-full h-full rounded"
+                                                                />
+                                                            </button>
+                                                        }
+                                                    }
+                                                />
+                                            </div>
+                                        </div>
                                     }.into_any()
                                 } else {
                                     let current_state_clone = current_state.clone(); // Clone here for the second button
@@ -361,6 +391,7 @@ pub fn Game(
                                                     if let Some(opponent) = current_state_clone.player2.clone() {
                                                         let won = current_state_clone.player1_score > current_state_clone.player2_score;
                                                         let _ = update_opponent_stats(&opponent.id, won);
+                                                        on_stats_update.run(());
                                                     }
                                                     on_exit.run(());
                                                 }

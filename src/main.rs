@@ -195,41 +195,38 @@ fn App() -> impl IntoView {
             {move || (!show_form.get()).then(|| view! {
                 <div class="grid grid-cols-2 gap-8 w-full max-w-4xl px-4">
                 <div>
-                    <h2 class="text-2xl font-bold mb-4">"Opponents"</h2>
-                    <div class="flex flex-col gap-2">
-                        <For
-                            each=move || opponents.get()
-                            key=|opponent| opponent.id.clone()
-                            children=move |opponent: Opponent| {
-                                let opponent_for_stats = opponent.clone();  // Clone at the start
-                                view! {
-                                    <div class="flex items-center justify-between p-2 bg-slate-800 rounded">
-                                    <div class="flex items-center gap-2 text-gray-300">
-                                        <span class="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-xs">
-                                            {if matches!(opponent.opponent_type, OpponentType::Computer) { "C" } else { "H" }}
-                                        </span>
-                                        {opponent.name.clone()}
-                                        {move || {
-                                            if let Some(user_data) = load_user_data() {
-                                                if let Some(stats) = user_data.opponent_stats.get(&opponent_for_stats.id) {
-                                                    view! {
-                                                        <span class="text-sm text-gray-500 ml-2">
-                                                            "(" {stats.wins} "-" {stats.losses} ")"
-                                                        </span>
-                                                    }.into_any()
-                                                } else {
-                                                    view! {
-                                                        <span class="text-sm text-gray-500 ml-2">"(0-0)"</span>
-                                                    }.into_any()
-                                                }
-                                            } else {
-                                                view! {
-                                                    <span class="text-sm text-gray-500 ml-2">"(0-0)"</span>
-                                                }.into_any()
-                                            }
-                                        }}
-                                    </div>
-                                    <div class="flex gap-2">
+                <h2 class="text-2xl font-bold mb-4">"Opponents"</h2>
+                <div class="flex flex-col gap-2">
+                    <For
+                        each=move || opponents.get()
+                        key=|opponent| opponent.id.clone()
+                        children=move |opponent: Opponent| {
+                            let opponent_id = opponent.id.clone();
+                            let opponent_stats = create_memo(move |_| {
+                                opponents_trigger.get();  // Force recalculation when trigger changes
+                                if let Some(user_data) = load_user_data() {
+                                    if let Some(stats) = user_data.opponent_stats.get(&opponent_id) {
+                                        (stats.wins, stats.losses)
+                                    } else {
+                                        (0, 0)
+                                    }
+                                } else {
+                                    (0, 0)
+                                }
+                            });
+                            
+                            view! {
+                                <div class="flex items-center justify-between p-2 bg-slate-800 rounded">
+                                <div class="flex items-center gap-2 text-gray-300">
+                                    <span class="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-xs">
+                                        {if matches!(opponent.opponent_type, OpponentType::Computer) { "C" } else { "H" }}
+                                    </span>
+                                    {opponent.name.clone()}
+                                    <span class="text-sm text-gray-500 ml-2">
+                                        "(" {move || opponent_stats.get().0} "-" {move || opponent_stats.get().1} ")"
+                                    </span>
+                                </div>
+                                        <div class="flex gap-2">
                                         {
                                             let delete_opponent = opponent.clone();
                                             view! {
@@ -377,12 +374,18 @@ fn App() -> impl IntoView {
                 </div>
             })}
         </div>
-        {move || show_game.get().map(|(opponent, speed)| view! {  // Change this line to destructure both values
+        {move || show_game.get().map(|(opponent, speed)| view! {  
             <Game
                 player_name=name.get()
                 opponent=opponent
-                speed=speed  // Add this line
-                on_exit=move || set_show_game.set(None)
+                speed=speed  
+                on_exit=move || {
+                    opponents_trigger.update(|v| *v = !*v);  
+                    set_show_game.set(None)
+                }
+                on_stats_update=move || {
+                    opponents_trigger.update(|v| *v = !*v);
+                }
             />
         })}
         {move || show_profile.get().then(|| view! {
