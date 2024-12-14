@@ -23,8 +23,6 @@ npx tailwindcss init
 
 After these steps, try `trunk serve` again. The build should work now since Tailwind CSS will be available locally in the project.
 
-Let me know what output you get and we can continue troubleshooting if needed!
-
 ## Description
 
 We'll be using the newest version of leptos with a postgres database, but initially we'll have sqlite database.
